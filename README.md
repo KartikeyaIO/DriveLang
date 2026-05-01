@@ -34,11 +34,7 @@ Details: [Lexer Architecture](docs/Lexer.md)
 ---
 
 ### Parser
-Consumes tokens and emits an intermediate representation (IR).
-
-- No AST construction
-- Direct IR emission
-- Designed for execution-oriented workflows
+Consumes tokens and emits intermediate representation (IR) with AST first design.
 
 Details: [Parser](docs/Parser.md)
 
