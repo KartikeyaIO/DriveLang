@@ -10,6 +10,7 @@ pub mod io;
 pub mod lexer;
 pub mod media;
 pub mod parser;
+pub mod range;
 pub mod text;
 
 // #[test]

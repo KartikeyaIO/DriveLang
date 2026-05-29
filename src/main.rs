@@ -1,22 +1,40 @@
 use editron_v1::{
-    io::{encode_image, load_image},
-    media::frame::{Color, Frame, Pos},
+    io::video_io::{Video, VideoEncoder},
+    media::frame::Pos,
 };
 
-fn main() {
-    let input_path = "test_inputs/freshers2.jpeg";
-    let output_path = "Outputs/output.png";
-    let mut frame1 = load_image(input_path, "rgba").expect("Image Loading Failed!");
+use std::time::Instant;
 
-    for i in (0..frame1.width()).step_by(1) {
-        for j in (0..frame1.height()).step_by(1) {
-            frame1
-                .contrast(&Pos(i, j), 2.0)
-                .expect("Contrast Increase Failed!");
-
-            frame1.saturation(&Pos(i, j), 3.5);
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let start = Instant::now();
+    let mut source = Video::open("test_inputs/input2.mp4").expect("Failed to open the file!");
+    println!("Video Opening time: {:?}", start.elapsed());
+    let start2 = Instant::now();
+    let audio_track = source.decode_audio().expect("failed to decode audio!");
+    println!("Audio Decoding Time: {:?}", start2.elapsed());
+    let mut encoder = VideoEncoder::open("Outputs/output2.mp4", &source, Some(&audio_track))
+        .expect("Failed to open the encoder");
+    encoder
+        .encode_audio(&audio_track)
+        .expect("Audio Encoding failed");
+    let start3 = Instant::now();
+    while let Some(mut frame) = source
+        .decode_next()
+        .expect("You have reached the End of this file")
+    {
+        for i in (0..frame.width()).step_by(3) {
+            for j in (0..frame.height()).step_by(4) {
+                let pos = Pos(i, j);
+                frame.brightness(&pos, 100);
+            }
         }
+        encoder.encode_frame(&frame).expect("Encoding Failed");
     }
+    println!("Video frame by frame Editing time: {:?}", start3.elapsed());
 
-    encode_image(&frame1, output_path).expect("Encoding of the Image Failed!");
+    // Mux the original audio back in unchanged
+
+    encoder.finish().expect("Video encoding failed");
+    println!("Total time: {:?}", start.elapsed());
+    Ok(())
 }
