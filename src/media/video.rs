@@ -32,7 +32,7 @@ impl TimeStamp {
 }
 impl TimeStamp {
     pub fn add(&self, other: TimeStamp) -> Self {
-        assert!(self.num == other.num && self.den == other.den);
+        let other = other.rescale(self.num, self.den);
 
         TimeStamp {
             value: self.value + other.value,
@@ -51,4 +51,23 @@ impl TimeStamp {
 pub struct VideoFrame {
     pub frame: Frame,
     pub pts: TimeStamp,
+}
+impl TimeStamp {
+    pub fn sub(&self, other: TimeStamp) -> Self {
+        let other = other.rescale(self.num, self.den);
+
+        TimeStamp {
+            value: self.value - other.value,
+            num: self.num,
+            den: self.den,
+        }
+    }
+
+    pub fn zero_like(other: TimeStamp) -> Self {
+        Self {
+            value: 0,
+            num: other.num,
+            den: other.den,
+        }
+    }
 }

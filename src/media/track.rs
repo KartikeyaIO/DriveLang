@@ -129,4 +129,102 @@ impl Track {
             (0..len).flat_map(move |i| frame.data.iter().map(move |ch| ch[i]))
         })
     }
+    pub fn slice(&self, start: TimeStamp, end: TimeStamp) -> Self {
+        assert!(start < end);
+
+        let buffer = self
+            .buffer
+            .iter()
+            .filter(|frame| frame.time >= start && frame.time < end)
+            .map(|frame| AudioFrame {
+                time: frame.time.sub(start),
+                data: frame.data.clone(),
+            })
+            .collect();
+
+        Track::new(self.sample_rate, self.channels, buffer)
+    }
+    pub fn merge(a: &Track, b: &Track) -> Result<Track, TrackError> {
+        if a.channels != b.channels || a.sample_rate != b.sample_rate {
+            return Err(TrackError::MixingIsNotPossible);
+        }
+
+        let offset = a.duration();
+
+        let mut buffer = a.buffer.clone();
+
+        buffer.extend(b.buffer.iter().map(|frame| AudioFrame {
+            time: frame.time.add(offset),
+            data: frame.data.clone(),
+        }));
+
+        Ok(Track::new(a.sample_rate, a.channels, buffer))
+    }
+    pub fn merge_many(tracks: &[Track]) -> Result<Track, TrackError> {
+        if tracks.is_empty() {
+            return Ok(Track::new(44100, 2, vec![]));
+        }
+
+        let sample_rate = tracks[0].sample_rate;
+        let channels = tracks[0].channels;
+
+        let mut offset = TimeStamp::zero_like(tracks[0].buffer[0].time);
+        let mut buffer = Vec::new();
+
+        for track in tracks {
+            if track.sample_rate != sample_rate || track.channels != channels {
+                return Err(TrackError::MixingIsNotPossible);
+            }
+
+            for frame in &track.buffer {
+                buffer.push(AudioFrame {
+                    time: frame.time.add(offset),
+                    data: frame.data.clone(),
+                });
+            }
+
+            offset = offset.add(track.duration());
+        }
+
+        Ok(Track::new(sample_rate, channels, buffer))
+    }
+    pub fn silence(duration: TimeStamp, sample_rate: u32, channels: u16) -> Self {
+        const FRAME_SIZE: usize = 1024;
+
+        let frame_duration = TimeStamp::from_seconds(
+            FRAME_SIZE as f64 / sample_rate as f64,
+            duration.num,
+            duration.den,
+        );
+
+        let mut current = TimeStamp::zero_like(duration);
+        let mut buffer = Vec::new();
+
+        while current < duration {
+            buffer.push(AudioFrame {
+                time: current,
+                data: vec![vec![0.0; FRAME_SIZE]; channels as usize],
+            });
+
+            current = current.add(frame_duration);
+        }
+
+        Track::new(sample_rate, channels, buffer)
+    }
+}
+impl Track {
+    pub fn duration(&self) -> TimeStamp {
+        let Some(last) = self.buffer.last() else {
+            return TimeStamp::default();
+        };
+
+        let samples = last.data.first().map(|c| c.len()).unwrap_or(0);
+
+        let frame_duration_secs = samples as f64 / self.sample_rate as f64;
+
+        let frame_duration =
+            TimeStamp::from_seconds(frame_duration_secs, last.time.num, last.time.den);
+
+        last.time.add(frame_duration)
+    }
 }
