@@ -38,6 +38,9 @@ pub enum TokenKind {
     Minus,
     Star,
     Slash,
+    LessThan,
+    GreaterThan,
+
     Blank,
     Kernel,
     EOF,
@@ -87,6 +90,8 @@ pub fn char_to_token(c: char) -> Option<TokenKind> {
         '-' => Some(TokenKind::Minus),
         '*' => Some(TokenKind::Star),
         '/' => Some(TokenKind::Slash),
+        '>' => Some(TokenKind::GreaterThan),
+        '<' => Some(TokenKind::LessThan),
         _ => None,
     }
 }

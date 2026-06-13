@@ -1,10 +1,14 @@
 import std::effects;
+import std::color;
+import std::core;
 
 frame1 = load("test_inputs/freshers2.jpeg");
 frame2 = blank(1920,1080);
 
 
-frame3 = frame1 -> gamma();
+frame3 = frame1 -> brightness(200)[0..500..3,0..1000..2]
+                ->red_tint();
+                
 
 
             

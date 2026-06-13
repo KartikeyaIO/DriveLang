@@ -1,0 +1,154 @@
+filter brightness(amount) {
+    r = r + amount;
+    g = g + amount;
+    b = b + amount;
+}
+
+filter contrast(factor) {
+    r = ((r - 128) * factor) + 128;
+    g = ((g - 128) * factor) + 128;
+    b = ((b - 128) * factor) + 128;
+}
+
+filter gain(amount) {
+    r = r * amount;
+    g = g * amount;
+    b = b * amount;
+}
+
+filter bias(amount) {
+    r = r + amount;
+    g = g + amount;
+    b = b + amount;
+}
+
+filter invert() {
+    r = 255 - r;
+    g = 255 - g;
+    b = 255 - b;
+}
+
+filter grayscale() {
+    r = (r + g + b) / 3;
+    g = (r + g + b) / 3;
+    b = (r + g + b) / 3;
+}
+
+filter red_gain(amount) {
+    r = r * amount;
+}
+
+filter green_gain(amount) {
+    g = g * amount;
+}
+
+filter blue_gain(amount) {
+    b = b * amount;
+}
+
+filter red_only() {
+    g = 0;
+    b = 0;
+}
+
+filter green_only() {
+    r = 0;
+    b = 0;
+}
+
+filter blue_only() {
+    r = 0;
+    g = 0;
+}
+
+filter alpha(value) {
+    a = value;
+}
+
+filter opacity(amount) {
+    a = a * amount;
+}
+
+
+
+
+filter quantize(levels) {
+    r = floor(r * levels / 256) * (256 / levels);
+    g = floor(g * levels / 256) * (256 / levels);
+    b = floor(b * levels / 256) * (256 / levels);
+}
+
+filter bitcrush(bits) {
+    r = floor(r * pow(2, bits) / 256) * (256 / pow(2, bits));
+    g = floor(g * pow(2, bits) / 256) * (256 / pow(2, bits));
+    b = floor(b * pow(2, bits) / 256) * (256 / pow(2, bits));
+}
+
+filter clamp_range(min, max) {
+    r = clamp(r, min, max);
+    g = clamp(g, min, max);
+    b = clamp(b, min, max);
+}
+
+filter clamp_low(min) {
+    r = max(r, min);
+    g = max(g, min);
+    b = max(b, min);
+}
+
+filter clamp_high(maxv) {
+    r = min(r, maxv);
+    g = min(g, maxv);
+    b = min(b, maxv);
+}
+
+filter gamma(value) {
+    r = pow(r / 255.0, value) * 255;
+    g = pow(g / 255.0, value) * 255;
+    b = pow(b / 255.0, value) * 255;
+}
+
+filter mask_white() {
+    r = 255;
+    g = 255;
+    b = 255;
+}
+
+filter mask_black() {
+    r = 0;
+    g = 0;
+    b = 0;
+}
+
+filter keep_red() {
+    g = 0;
+    b = 0;
+}
+
+filter keep_green() {
+    r = 0;
+    b = 0;
+}
+
+filter keep_blue() {
+    r = 0;
+    g = 0;
+}
+
+filter max_channel() {
+    r = max(r, max(g, b));
+    g = max(r, max(g, b));
+    b = max(r, max(g, b));
+}
+
+filter min_channel() {
+    r = min(r, min(g, b));
+    g = min(r, min(g, b));
+    b = min(r, min(g, b));
+}
+
+filter average_channel() {
+    r = (r + g + b) / 3;
+    g = (r + g + b) / 3;
+    b = (r + g + b) / 3;
+}

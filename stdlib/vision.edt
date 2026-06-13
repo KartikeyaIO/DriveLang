@@ -1,0 +1,29 @@
+import core;
+
+ filter edge_detect() {
+    sobel()
+}
+
+ filter outline() {
+    sobel()
+    threshold(64)
+}
+
+ filter strong_edges() {
+    sobel()
+    contrast(2.0)
+}
+
+ filter weak_edges() {
+    sobel()
+    contrast(0.5)
+}
+
+ filter contour() {
+    laplacian()
+}
+
+ filter binary_edges() {
+    sobel()
+    threshold(128)
+}

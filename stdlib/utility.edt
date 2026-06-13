@@ -1,0 +1,29 @@
+import core;
+
+ filter thumbnail() {
+    resize(256,256)
+}
+
+ filter avatar() {
+    resize(512,512)
+}
+
+ filter wallpaper() {
+    resize(1920,1080)
+}
+
+ filter rotate_left() {
+    rotate270()
+}
+
+ filter rotate_right() {
+    rotate90()
+}
+
+ filter flip_horizontal() {
+    flip_x()
+}
+
+ filter flip_vertical() {
+    flip_y()
+}
