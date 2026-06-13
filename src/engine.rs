@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::filter::{Filter, Instruction};
 use crate::io::io::{self, IOError};
 use crate::media::frame::Frame;
-use crate::parser::{BinOp, Channel, ChannelAssign, Expr, FilterDecl, Item, Program};
+use crate::parser::{BinOp, Channel, ChannelAssign, Expr, FilterDecl, Import, Item, Program};
 use crate::pipeline::kernel::Kernel;
 use crate::pipeline::pipeline::{EffectPipeline, Operation, Pipeline, PipelineError};
 use crate::range::{Mask, Rect, StepRange};
@@ -266,6 +266,7 @@ pub struct Engine {
     vars: HashMap<String, Value>,
     filters: HashMap<String, Filter>,
     kernels: HashMap<String, Kernel>,
+    imported_files: HashSet<String>,
 }
 
 impl Engine {
@@ -274,7 +275,25 @@ impl Engine {
             vars: HashMap::new(),
             filters: HashMap::new(),
             kernels: HashMap::new(),
+            imported_files: HashSet::new(),
         }
+    }
+    fn import_file(&mut self, path: &str) -> Result<(), EngineError> {
+        if self.imported_files.contains(path) {
+            return Ok(());
+        }
+
+        self.imported_files.insert(path.to_string());
+
+        let source = std::fs::read_to_string(path)
+            .map_err(|e| EngineError::Eval(format!("import failed: {e}")))?;
+
+        let program = crate::parser::parse(&source)
+            .map_err(|e| EngineError::Eval(format!("parse failed: {e}")))?;
+
+        self.run(&program)?;
+
+        Ok(())
     }
 
     pub fn run(&mut self, program: &Program) -> Result<(), EngineError> {
@@ -286,8 +305,24 @@ impl Engine {
 
     fn exec_item(&mut self, item: &Item) -> Result<(), EngineError> {
         match item {
-            Item::Import(_) => {
-                // stdlib/file imports not wired up yet — no-op for now.
+            Item::Import(import) => {
+                match import {
+                    Import::File { path, .. } => {
+                        self.import_file(path)?;
+                    }
+
+                    Import::Std(path) => {
+                        let mut std_path = String::from("stdlib/");
+
+                        std_path
+                            .push_str(&path.iter().skip(1).cloned().collect::<Vec<_>>().join("/"));
+
+                        std_path.push_str(".edt");
+
+                        self.import_file(&std_path)?;
+                    }
+                }
+
                 Ok(())
             }
 
