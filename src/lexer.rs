@@ -25,6 +25,13 @@ pub enum TokenKind {
     RightBrace,
     SemiColon,
     Equal,
+    EqualEqual,
+    NotEqual,
+    GreaterEqual,
+    LessEqual,
+    And,
+    Or,
+    Not,
     Load,
     Filter,
     Export,
@@ -40,6 +47,7 @@ pub enum TokenKind {
     Star,
     Slash,
     LessThan,
+
     GreaterThan,
 
     Blank,
@@ -54,6 +62,7 @@ pub enum State {
     Identifier,
     String,
     Number,
+    Comment,
 }
 #[derive(Debug, Clone)]
 pub enum LexError {
@@ -82,7 +91,7 @@ pub fn char_to_token(c: char) -> Option<TokenKind> {
         ')' => Some(TokenKind::RightParen),
         '{' => Some(TokenKind::LeftBrace),
         '}' => Some(TokenKind::RightBrace),
-        '=' => Some(TokenKind::Equal),
+
         ';' => Some(TokenKind::SemiColon),
         '[' => Some(TokenKind::LeftBracket),
         ']' => Some(TokenKind::RightBracket),
@@ -90,9 +99,7 @@ pub fn char_to_token(c: char) -> Option<TokenKind> {
         '+' => Some(TokenKind::Plus),
         '-' => Some(TokenKind::Minus),
         '*' => Some(TokenKind::Star),
-        '/' => Some(TokenKind::Slash),
-        '>' => Some(TokenKind::GreaterThan),
-        '<' => Some(TokenKind::LessThan),
+
         _ => None,
     }
 }
@@ -106,6 +113,9 @@ fn identify_token(s: &str) -> TokenKind {
         "as" => TokenKind::As,
         "kernel" => TokenKind::Kernel,
         "blank" => TokenKind::Blank,
+        "and" => TokenKind::And,
+        "or" => TokenKind::Or,
+        "not" => TokenKind::Not,
         "let" => TokenKind::Let,
         _ => TokenKind::Identifier,
     }
@@ -187,6 +197,86 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
                         });
                     }
                 }
+                '=' => {
+                    if i + 1 < len && bytes[i + 1] as char == '=' {
+                        tokens.push(Token {
+                            kind: TokenKind::EqualEqual,
+                            value: "==".to_string(),
+                            line,
+                        });
+                        i += 2;
+                    } else {
+                        tokens.push(Token {
+                            kind: TokenKind::Equal,
+                            value: "=".to_string(),
+                            line,
+                        });
+                        i += 1;
+                    }
+                }
+                '>' => {
+                    if i + 1 < len && bytes[i + 1] as char == '=' {
+                        tokens.push(Token {
+                            kind: TokenKind::GreaterEqual,
+                            value: ">=".to_string(),
+                            line,
+                        });
+                        i += 2;
+                    } else {
+                        tokens.push(Token {
+                            kind: TokenKind::GreaterThan,
+                            value: ">".to_string(),
+                            line,
+                        });
+                        i += 1;
+                    }
+                }
+                '<' => {
+                    if i + 1 < len && bytes[i + 1] as char == '=' {
+                        tokens.push(Token {
+                            kind: TokenKind::LessEqual,
+                            value: "<=".to_string(),
+                            line,
+                        });
+                        i += 2;
+                    } else {
+                        tokens.push(Token {
+                            kind: TokenKind::LessThan,
+                            value: "<".to_string(),
+                            line,
+                        });
+                        i += 1;
+                    }
+                }
+                '!' => {
+                    if i + 1 < len && bytes[i + 1] as char == '=' {
+                        tokens.push(Token {
+                            kind: TokenKind::NotEqual,
+                            value: "!=".to_string(),
+                            line,
+                        });
+                        i += 2;
+                    } else {
+                        return Err(LexError::InvalidCharacter {
+                            ch: '!',
+                            line,
+                            message: "Unexpected '!' — did you mean '!='?".to_string(),
+                        });
+                    }
+                }
+                '/' => {
+                    if i + 1 < len && bytes[i + 1] as char == '/' {
+                        state = State::Comment;
+                        i += 2;
+                    } else {
+                        tokens.push(Token {
+                            kind: TokenKind::Slash,
+                            value: "/".to_string(),
+                            line,
+                        });
+                        i += 1;
+                    }
+                }
 
                 '-' => {
                     if i + 1 < len && bytes[i + 1] as char == '>' {
@@ -197,8 +287,6 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
                         });
                         i += 2;
                     } else {
-                        // Always a Minus token. Unary-vs-binary is resolved by
-                        // the parser based on position (prefix vs infix).
                         tokens.push(Token {
                             kind: TokenKind::Minus,
                             value: "-".to_string(),
@@ -299,6 +387,13 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
                     state = State::Default;
                 }
             }
+            State::Comment => {
+                if c == '\n' {
+                    line += 1;
+                    state = State::Default;
+                }
+                i += 1;
+            }
         }
     }
     match state {
@@ -328,6 +423,7 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
                 line,
             });
         }
+        State::Comment => {}
         State::Default => {}
     }
     tokens.push(Token {

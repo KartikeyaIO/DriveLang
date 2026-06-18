@@ -76,7 +76,7 @@ Supported operations:
 - Math: `abs`, `min`, `max`, `clamp`, `sqrt`, `exp`, `log`, `log10`
 - Trig: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`
 - Rounding: `floor`, `ceil`, `round`
--  Future Update: Comparison and logic: `==`, `!=`, `>`, `>=`, `<`, `<=`, `and`, `or`, `not`
+- Comparison and logic: `==`, `!=`, `>`, `>=`, `<`, `<=`, `and`, `or`, `not`
 
 ---
 
@@ -182,7 +182,7 @@ result = image
 
 export(result, "output.png");
 ```
-- `Comments are not yet supported in Editron, but they were required for explanation, you must remove them before running the code.
+
 
 ### Filter Body
 

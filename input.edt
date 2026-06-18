@@ -1,14 +1,12 @@
-import std::effects;
-import std::color;
-import std::core;
-import std::vision;
-import std::image;
 
-frame1 = load("test_inputs/freshers2.jpeg");
+import std::mask;
+import std::advanced;
+
+frame1 = load("test_inputs/image_bw.webp");
 frame2 = blank(1920,1080);
 
 
-frame3 = frame1 -> bitcrush(8);
+frame3 = frame1 -> chroma_key(128,128,128,35);
 
 
                 

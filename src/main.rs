@@ -1,5 +1,5 @@
-use editron_v1::engine::Engine;
-use editron_v1::parser;
+use editron::engine::Engine;
+use editron::parser;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let source = std::fs::read_to_string("input.edt").expect("Failed to read file");
 

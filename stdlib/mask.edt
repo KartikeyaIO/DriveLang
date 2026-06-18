@@ -1,22 +1,8 @@
-import std::core;
 
-
-filter top_half() {
-    rows(0, height/2)
-}
-
-filter bottom_half() {
-    rows(height/2, height)
-}
-
-filter left_half() {
-    cols(0, width/2)
-}
-
-filter right_half() {
-    cols(width/2, width)
-}
-
-filter center_square() {
-    rect(width/4, height/4, width/2, height/2)
+filter threshold(t) {
+    let luma = r * 0.299 + g * 0.587 + b * 0.114;
+    let on = luma > t;
+    r = on * 255;
+    g = on * 255;
+    b = on * 255;
 }

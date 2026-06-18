@@ -107,6 +107,10 @@ fn compile_into(
             compile_into(inner, params, param_count, out)?;
             out.push(Instruction::Neg);
         }
+        Expr::Not(inner) => {
+            compile_into(inner, params, param_count, out)?;
+            out.push(Instruction::Not);
+        }
 
         Expr::BinOp { op, lhs, rhs } => {
             compile_into(lhs, params, param_count, out)?;
@@ -116,6 +120,15 @@ fn compile_into(
                 BinOp::Sub => Instruction::Sub,
                 BinOp::Mul => Instruction::Mul,
                 BinOp::Div => Instruction::Div,
+                // Add these:
+                BinOp::Eq => Instruction::Eq,
+                BinOp::Ne => Instruction::Ne,
+                BinOp::Gt => Instruction::Gt,
+                BinOp::Ge => Instruction::Ge,
+                BinOp::Lt => Instruction::Lt,
+                BinOp::Le => Instruction::Le,
+                BinOp::And => Instruction::And,
+                BinOp::Or => Instruction::Or,
             });
         }
 
@@ -425,6 +438,10 @@ impl Engine {
                 Value::Number(n) => Ok(Value::Number(-n)),
                 _ => Err(EngineError::Eval("cannot negate a frame".into())),
             },
+            Expr::Not(inner) => match self.eval(inner)? {
+                Value::Number(n) => Ok(Value::Number(if n == 0.0 { 1.0 } else { 0.0 })),
+                _ => Err(EngineError::Eval("cannot apply 'not' to a frame".into())),
+            },
 
             Expr::BinOp { op, lhs, rhs } => {
                 let l = self.eval_number(lhs)?;
@@ -438,6 +455,62 @@ impl Engine {
                             0.0
                         } else {
                             l / r
+                        }
+                    }
+                    BinOp::Eq => {
+                        if l == r {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    BinOp::Ne => {
+                        if l != r {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    BinOp::Gt => {
+                        if l > r {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    BinOp::Ge => {
+                        if l >= r {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    BinOp::Lt => {
+                        if l < r {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    BinOp::Le => {
+                        if l <= r {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    BinOp::And => {
+                        if l != 0.0 && r != 0.0 {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
+                    BinOp::Or => {
+                        if l != 0.0 || r != 0.0 {
+                            1.0
+                        } else {
+                            0.0
                         }
                     }
                 }))

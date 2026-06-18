@@ -1,0 +1,110 @@
+
+import std::core;
+
+// 1. Chroma Key (Green Screen)
+// For when you filmed your masterpiece in front of a neon green bedsheet.
+// Replaces pixels close to the target color (key_r, key_g, key_b) with transparency.
+filter chroma_key(key_r, key_g, key_b, tolerance) {
+    let dr = r - key_r;
+    let dg = g - key_g;
+    let db = b - key_b;
+    
+    // 3D distance in RGB space
+    let dist = sqrt((dr * dr) + (dg * dg) + (db * db));
+    
+    // If the distance is less than our tolerance, it's a match (1.0)
+    let is_bg = dist < tolerance;
+    
+    // If it's the background, multiply alpha by 0. Otherwise multiply by 1.
+    a = a * (not is_bg);
+}
+
+// 2. Color Splash (The "Sin City" Effect)
+// Turns everything grayscale EXCEPT the target color (e.g., red).
+filter color_splash_red(tolerance) {
+    // Check if red is dominating the other two channels
+    let is_red = (r > (g + tolerance)) and (r > (b + tolerance));
+    
+    let luma = r * 0.299 + g * 0.587 + b * 0.114;
+    
+    // Branchless magic: Original color if red, grayscale if not.
+    r = (is_red * r) + ((not is_red) * luma);
+    g = (is_red * g) + ((not is_red) * luma);
+    b = (is_red * b) + ((not is_red) * luma);
+}
+
+// 3. Split Toning
+// Highlights get one tint (warmer), shadows get another (cooler).
+filter split_tone(split_point) {
+    let luma = r * 0.299 + g * 0.587 + b * 0.114;
+    let is_highlight = luma > split_point;
+    
+    // Highlights boost red/green, drop blue. Shadows boost blue, drop red.
+    let r_mult = (is_highlight * 1.2) + ((not is_highlight) * 0.85);
+    let b_mult = (is_highlight * 0.85) + ((not is_highlight) * 1.2);
+    
+    r = clamp(r * r_mult, 0, 255);
+    // Green stays mostly neutral to act as an anchor
+    b = clamp(b * b_mult, 0, 255);
+}
+
+// 4. CRT Scanlines
+// Simulates the 1990s TV your parents wouldn't let you sit too close to.
+filter scanlines(intensity) {
+    // Simulating modulo: y % 2 == 0
+    let is_even = (y - floor(y / 2) * 2) == 0;
+    
+    // If it's an even row, darken it by the intensity factor
+    let factor = 1.0 - (is_even * intensity);
+    
+    r = r * factor;
+    g = g * factor;
+    b = b * factor;
+}
+
+// 5. Grid Overlay
+// Imposes a structural grid over the image. Good for sci-fi UI vibes.
+filter grid(spacing, grid_r, grid_g, grid_b) {
+    // Simulating modulo: x % spacing == 0
+    let mod_x = x - floor(x / spacing) * spacing;
+    let mod_y = y - floor(y / spacing) * spacing;
+    
+    let is_line = (mod_x == 0) or (mod_y == 0);
+    
+    // Force the pixel to the grid color if it lies on a grid line
+    r = (is_line * grid_r) + ((not is_line) * r);
+    g = (is_line * grid_g) + ((not is_line) * g);
+    b = (is_line * grid_b) + ((not is_line) * b);
+}
+
+// 6. True Vignette
+// Uses actual pixel coordinates to darken the corners!
+filter vignette(strength) {
+    let cx = width / 2;
+    let cy = height / 2;
+    
+    let dx = x - cx;
+    let dy = y - cy;
+    
+    let dist = sqrt((dx * dx) + (dy * dy));
+    let max_dist = sqrt((cx * cx) + (cy * cy));
+    
+    // Factor approaches 0 at the extreme corners
+    let factor = clamp(1.0 - ((dist / max_dist) * strength), 0.0, 1.0);
+    
+    r = r * factor;
+    g = g * factor;
+    b = b * factor;
+}
+
+// 7. Depth Map Simulator (Z-Buffer Fake)
+// Creates a gradient from top to bottom (or based on luma) to simulate depth fog.
+filter depth_fog(fog_r, fog_g, fog_b) {
+    // Factor goes from 0.0 at top (y=0) to 1.0 at bottom (y=height)
+    let depth_factor = y / height;
+    
+    // Blend the original color with the fog color based on depth
+    r = (r * (1.0 - depth_factor)) + (fog_r * depth_factor);
+    g = (g * (1.0 - depth_factor)) + (fog_g * depth_factor);
+    b = (b * (1.0 - depth_factor)) + (fog_b * depth_factor);
+}

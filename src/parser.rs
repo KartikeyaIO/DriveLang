@@ -16,6 +16,14 @@ pub enum BinOp {
     Sub,
     Mul,
     Div,
+    Eq,
+    Ne,
+    Gt,
+    Ge,
+    Lt,
+    Le,
+    And,
+    Or,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,6 +53,7 @@ pub enum Expr {
     },
     // NEW: Array literals for Kernel matrices like `[[1, 2, 1], [2, 4, 2], [1, 2, 1]]`
     Array(Vec<Expr>),
+    Not(Box<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -366,7 +375,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_pipe(&mut self) -> PResult<Expr> {
-        let base = self.parse_range()?;
+        let base = self.parse_logical()?;
 
         if !self.check(&TokenKind::Arrow) {
             return Ok(base);
@@ -470,8 +479,58 @@ impl<'a> Parser<'a> {
 
         Ok(lhs)
     }
+    fn parse_logical(&mut self) -> PResult<Expr> {
+        let mut lhs = self.parse_comparison()?;
+
+        loop {
+            let op = match self.peek_kind() {
+                TokenKind::And => BinOp::And,
+                TokenKind::Or => BinOp::Or,
+                _ => break,
+            };
+            self.advance();
+            let rhs = self.parse_comparison()?;
+            lhs = Expr::BinOp {
+                op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            };
+        }
+
+        Ok(lhs)
+    }
+
+    fn parse_comparison(&mut self) -> PResult<Expr> {
+        let mut lhs = self.parse_range()?;
+
+        loop {
+            let op = match self.peek_kind() {
+                TokenKind::EqualEqual => BinOp::Eq,
+                TokenKind::NotEqual => BinOp::Ne,
+                TokenKind::GreaterThan => BinOp::Gt,
+                TokenKind::GreaterEqual => BinOp::Ge,
+                TokenKind::LessThan => BinOp::Lt,
+                TokenKind::LessEqual => BinOp::Le,
+                _ => break,
+            };
+            self.advance();
+            let rhs = self.parse_range()?;
+            lhs = Expr::BinOp {
+                op,
+                lhs: Box::new(lhs),
+                rhs: Box::new(rhs),
+            };
+        }
+
+        Ok(lhs)
+    }
 
     fn parse_unary(&mut self) -> PResult<Expr> {
+        if self.check(&TokenKind::Not) {
+            self.advance();
+            let expr = self.parse_unary()?;
+            return Ok(Expr::Not(Box::new(expr)));
+        }
         if self.check(&TokenKind::Minus) {
             self.advance();
             let expr = self.parse_unary()?;
