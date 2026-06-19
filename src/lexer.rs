@@ -491,7 +491,7 @@ mod tests {
 
     #[test]
     fn lex_as_keyword() {
-        let toks = lexer("import \"f.edt\" as filt;").unwrap();
+        let toks = lexer("import \"f.drive\" as filt;").unwrap();
         let kinds: Vec<_> = toks.iter().map(|t| t.kind.clone()).collect();
         assert_eq!(
             kinds,

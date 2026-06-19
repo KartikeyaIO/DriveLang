@@ -146,7 +146,7 @@ Encodes a sequence of `Frame`s (and optionally a `Track`) into a container file.
 
 ## DSL
 
-Drive's DSL is the primary interface for defining pipelines. Filters and kernels declared in `.edt` files are the only extension point — no Rust changes are needed to add new processing operations.
+Drive's DSL is the primary interface for defining pipelines. Filters and kernels declared in `.drive` files are the only extension point — no Rust changes are needed to add new processing operations.
 
 ### Syntax
 
@@ -155,7 +155,7 @@ Drive's DSL is the primary interface for defining pipelines. Filters and kernels
 import std::color;
 
 // Import a file
-import "my_filters.edt" as custom;
+import "my_filters.drive" as custom;
 
 // Declare a filter with parameters and local variables
 filter brightness(amount) {
@@ -205,7 +205,7 @@ The `[x_range, y_range]` bracket suffix is optional. Ranges support an optional 
 
 ```edt
 import std::color;          
-import "path/to/file.edt" as alias;
+import "path/to/file.drive" as alias;
 ```
 
 Imported filters and kernels are merged into the current engine scope. Circular imports are detected and skipped.
