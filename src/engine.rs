@@ -16,7 +16,7 @@ use std::rc::Rc;
 #[derive(Clone)]
 pub struct VideoHandle(pub Rc<RefCell<Video>>);
 
-// Provide a custom, safe Debug implementation that peeks at the metadata
+
 impl std::fmt::Debug for VideoHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let vid = self.0.borrow();
@@ -392,6 +392,49 @@ impl Engine {
                 self.filters.insert(decl.name.clone(), filter);
                 Ok(())
             }
+            Item::Print { args } => {
+                let len = args.len();
+
+                let mut str = match &args[0] {
+                    Expr::Str(string) => string.clone(),
+                    _ => {
+                        return Err(EngineError::Eval(
+                            "First argument to print must be a String!!".to_string(),
+                        ));
+                    }
+                };
+
+                let mut arg_index = 1;
+
+                while let Some(placeholder_pos) = str.find("{}") {
+                    if arg_index >= len {
+                        return Err(EngineError::Eval(
+                            "Not enough arguments provided for format string!".to_string(),
+                        ));
+                    }
+
+                    let replacement = match &args[arg_index] {
+                        Expr::Str(s) => s.clone(),
+                        Expr::Float(n) => n.to_string(),
+                        Expr::Int(b) => b.to_string(),
+
+                        _ => "unknown_type".to_string(),
+                    };
+
+                    str.replace_range(placeholder_pos..placeholder_pos + 2, &replacement);
+
+                    arg_index += 1;
+                }
+
+                if arg_index < len {
+                    return Err(EngineError::Eval(
+                        "Too many arguments provided for format string!".to_string(),
+                    ));
+                }
+
+                println!("{}", str);
+                Ok(())
+            }
 
             Item::KernelDecl { name, matrix } => {
                 let kernel = compile_kernel_decl(name, matrix)?;
@@ -547,8 +590,7 @@ impl Engine {
                     Some(Expr::Str(s)) => s.clone(),
                     _ => return Err(EngineError::Eval("load() requires a string path".into())),
                 };
-                // Always load as RGBA — pipeline normalizes anyway, and this
-                // keeps load() side-effect-free w.r.t. format.
+                
                 let frame = io::load_image(&path_str, "rgba")
                     .map_err(|e| EngineError::Eval(format!("{e}")))?;
                 Ok(Value::Frame(frame))
@@ -565,6 +607,7 @@ impl Engine {
 
                 Ok(Value::Frame(Frame::blank(width, height)))
             }
+
             other => Err(EngineError::UndefinedOp(format!(
                 "unknown function '{other}'"
             ))),

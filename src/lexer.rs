@@ -37,6 +37,7 @@ pub enum TokenKind {
     Export,
     LeftBracket,
     RightBracket,
+    Print,
     Dot,
     Comma,
     DotDot,
@@ -117,6 +118,7 @@ fn identify_token(s: &str) -> TokenKind {
         "or" => TokenKind::Or,
         "not" => TokenKind::Not,
         "let" => TokenKind::Let,
+        "print" => TokenKind::Print,
         _ => TokenKind::Identifier,
     }
 }

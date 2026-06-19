@@ -93,6 +93,7 @@ pub struct FilterDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Item {
     Import(Import),
+    Print { args: Vec<Expr> },
     Assign { name: String, value: Expr },
     FilterDecl(FilterDecl),
     // NEW: Kernel Declaration, e.g., kernel blur = [[1.0, 2.0], [3.0, 4.0]];
@@ -233,15 +234,24 @@ impl<'a> Parser<'a> {
         match self.peek_kind() {
             TokenKind::Import => self.parse_import(),
             TokenKind::Filter => self.parse_filter_decl(),
-            TokenKind::Kernel => self.parse_kernel_decl(), // Route Kernel Tokens
+            TokenKind::Kernel => self.parse_kernel_decl(),
             TokenKind::Export => self.parse_export(),
             TokenKind::Identifier => self.parse_assignment(),
+            TokenKind::Print => self.parse_print(),
             other => Err(ParseError::UnexpectedToken {
                 expected: "import, filter, kernel, export, or assignment".to_string(),
                 found: other.clone(),
                 line: self.peek().line,
             }),
         }
+    }
+    fn parse_print(&mut self) -> PResult<Item> {
+        self.advance();
+        self.expect(TokenKind::LeftParen, "'(' after 'print'")?;
+        let args = self.parse_arg_list()?;
+        self.expect(TokenKind::RightParen, "')'")?;
+        self.expect(TokenKind::SemiColon, "';' after ')'");
+        Ok(Item::Print { args })
     }
 
     fn parse_import(&mut self) -> PResult<Item> {
@@ -600,6 +610,7 @@ impl<'a> Parser<'a> {
                     args,
                 })
             }
+
             TokenKind::Blank => {
                 self.advance();
 
