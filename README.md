@@ -1,249 +1,342 @@
-# Drive
+# Editron DSL Reference
 
-Drive is an experimental media processing engine and domain-specific language for building composable, declarative media pipelines.
-
-The project is built around a philosophy of **infrastructure over individual filters** — new processing operations should require only new DSL expressions, never new Rust code.
+The Editron DSL (`.drive` files) is a declarative language for defining image and video processing pipelines. Programs are sequences of top-level items executed in order.
 
 ---
 
-## Project Goals
+## Top-Level Items
 
-1. Provide a simple, readable syntax for defining media processing pipelines
-2. Compile DSL filter declarations into efficient bytecode executed by a stack VM
-3. Support performance-critical processing with minimal per-filter overhead
-4. Handle multiple media formats through a unified RGBA-normalized interface
-5. Build a complete standard library of filters expressed entirely in the DSL
+These are the statements valid at the top level of a `.drive` file.
 
----
-
-## Architecture Overview
-
-### Lexer
-Converts `.drive` source into a flat token stream.
-
-- Implemented as a single-pass state machine over raw bytes
-- Handles identifiers, numbers (int/float), strings, operators, and keywords
-- Produces `Vec<Token>` with kind, value, and line number
-- Keywords: `filter`, `kernel`, `import`, `export`, `load`, `blank`, `let`, `as`
-
-Details: [Lexer Architecture](docs/Lexer.md)
-
----
-
-### Parser
-Consumes tokens and emits a typed AST.
-
-- Recursive descent, AST-first design
-- Supports binary arithmetic (`+`, `-`, `*`, `/`), unary negation, and precedence climbing
-- `Pipe` expressions (`base -> stage(args)[mask]`) for chaining operations
-- `Range` expressions (`start..end..step`) for spatial masks
-- `Array` literals for kernel matrix declarations (`[[1, 2, 1], ...]`)
-- `let` bindings inside filter bodies for named intermediate values
-
-Details: [Parser](docs/Parser.md)
-
----
-
-### Engine
-The execution core. Drives the full parse → compile → run cycle.
-
-Responsibilities:
-- Compiling `FilterDecl` AST nodes into `Filter` bytecode structs
-- Compiling `KernelDecl` AST nodes into `Kernel` convolution structs
-- Evaluating top-level assignments, imports, and exports
-- Building `EffectPipeline` instances from pipe expressions
-- Resolving import paths for both file imports and stdlib imports
-
-#### Filter Compilation
-Each `filter` declaration compiles into four independent bytecode programs — one per RGBA channel. Local variables declared with `let` inside a filter body are compiled into `StoreLocal`/`LoadLocal` instructions, with setup instructions prepended to every channel program so locals are available regardless of which channel is executing.
-
-Unassigned channels default to pass-through (`LoadR`, `LoadG`, `LoadB`, `LoadA`).
-
-#### Kernel Compilation
-`kernel` declarations compile matrix literals into flat `Vec<f32>` with an automatic divisor computed from the sum of weights (or `1.0` for zero-sum kernels like edge detectors).
-
----
-
-### Filter VM
-A lightweight stack-based virtual machine that executes compiled filter programs per-pixel.
-
-Supported operations:
-- Channel access: `r`, `g`, `b`, `a`
-- Frame metadata: `x`, `y`, `width`, `height`
-- Parameters: indexed by declaration order
-- Local variables: `StoreLocal` / `LoadLocal`
-- Arithmetic: `+`, `-`, `*`, `/`, `%`, `pow`
-- Math: `abs`, `min`, `max`, `clamp`, `sqrt`, `exp`, `log`, `log10`
-- Trig: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`
-- Rounding: `floor`, `ceil`, `round`
-- Comparison and logic: `==`, `!=`, `>`, `>=`, `<`, `<=`, `and`, `or`, `not`
-
----
-
-### Pipeline
-Applies a sequence of operations to a frame in declaration order.
+### Import
 
 ```
-EffectPipeline
-  ├── PointFilter  →  runs FilterVM per-pixel (with optional spatial Mask)
-  └── Convolution  →  runs Kernel against a pre-snapshot of the frame
+import std::core;
+import "path/to/file.drive" as alias;
 ```
 
-Convolution operations snapshot the frame before the pass so kernel reads are always from the unmodified source — no bleed between filter stages.
+- `import std::X` loads `stdlib/X.drive` relative to the working directory.
+- `import "path" as alias` loads an external file. The alias is currently registered but imports are run immediately — the alias is not used for namespacing yet.
+- Circular imports are safe; already-imported files are skipped.
 
-Spatial masks restrict any operation to a `Rect` region, built from `Range` expressions in pipe stage brackets: `-> filter(args)[x_range, y_range]`.
+### Variable Assignment
 
-Dynamic kernels (e.g. `blur(15)`) are generated at runtime without requiring a static `kernel` declaration.
+```
+img = load("photo.png");
+w = 1920;
+h = 1080;
+```
 
----
+Variables hold one of three value types: `Frame`, `Number`, or `String`. Type errors surface at runtime.
 
-## Core Data Types
+### `load(path)`
 
-### Frame
-Represents a single image or video frame.
+```
+img = load("input.png");
+```
 
-- Planar channel layout: separate `Vec<u8>` per channel
-- Formats: `RGBA`, `RGB`, `GRAY`, `YUV420`
-- All pipeline processing normalizes to `RGBA` at entry
-- YUV remains only as a decode/encode boundary format handled by FFmpeg
-- Operations: `get_pixel`, `set_pixel`, `blit`, `blend`, `blend_on`, `crop`, `brightness`, `contrast`, `saturation`, `opacity`
+Loads an image from disk as an RGBA frame. This is a built-in call, not a user-defined filter.
 
-Details: [Frame](docs/Frame.md)
+### `blank(width, height)`
 
----
+```
+canvas = blank(1920, 1080);
+```
 
-### Track
-Represents decoded audio data.
+Creates a fully transparent RGBA frame of the given dimensions.
 
-- Planar `f32` samples: `Vec<Vec<f32>>` (channel × sample)
-- `AudioFrame` carries a `TimeStamp` and one chunk of planar sample data
-- Operations: `gain`, `mix`, `merge`, `slice`, `normalize`, `silence`, `to_pcm_f32`, `to_pcm_i16`
+### `text(content, font_path, size, r, g, b)`
 
-Details: [Track](docs/Track.md)
+```
+label = text("Hello", "fonts/Inter.ttf", 48, 255, 255, 255);
+```
 
----
+Rasterizes a string to an RGBA frame using the given font file and color.
 
-### Video
-Provides frame-by-frame access to video streams via FFmpeg.
+### `export(frame, path)`
 
-- Sequential decode with `decode_next()`
-- Seek + forward-decode with `decode_frame(index)`
-- Embedded audio extraction with `decode_audio()`
-- All decoded frames are converted to planar RGBA, with FFmpeg linesize padding stripped
+```
+export(result, "output.png");
+```
 
-Details: [Video](docs/Video.md)
+Encodes a frame to disk as a PNG. The path must be a string literal.
 
----
+### `print(format_string, ...args)`
 
-### VideoEncoder
-Encodes a sequence of `Frame`s (and optionally a `Track`) into a container file.
+```
+print("Width: {}, Height: {}", 1920, 1080);
+```
 
-- RGBA input → YUV420P via swscale → MPEG4 video stream
-- Planar f32 audio → AAC stream (optional, registered before header write)
-- Monotonic PTS assignment; caller never touches time-bases
+Prints a formatted string to stdout. `{}` is the only placeholder. The first argument must be a string literal; subsequent arguments are numbers, strings, or literals.
 
----
+### Filter Declaration
 
-## DSL
+See the Filter Declaration section below.
 
-Drive's DSL is the primary interface for defining pipelines. Filters and kernels declared in `.drive` files are the only extension point — no Rust changes are needed to add new processing operations.
+### Effect Declaration
 
-### Syntax
+See the Effect Declaration section below.
 
-```edt
-// Import a stdlib module
-import std::color;
+### Kernel Declaration
 
-// Import a file
-import "my_filters.drive" as custom;
-
-// Declare a filter with parameters and local variables
-filter brightness(amount) {
-    let shift = amount * 2.55;
-    r = clamp(r + shift, 0, 255);
-    g = clamp(g + shift, 0, 255);
-    b = clamp(b + shift, 0, 255);
-}
-
-// Declare a convolution kernel
+```
 kernel sharpen = [
     [ 0, -1,  0],
     [-1,  5, -1],
     [ 0, -1,  0]
 ];
-
-// Load, process, and export
-image = load("input.jpg");
-
-result = image
-    -> brightness(10)
-    -> sharpen()
-    -> custom::vignette(0.4)[100..900, 50..700];
-
-export(result, "output.png");
 ```
 
+Declares a named convolution kernel. The matrix must be a square 2D array of numeric literals. The divisor is computed automatically as the sum of all weights (or 1.0 if the sum is zero, for edge-detection kernels).
 
-### Filter Body
+### For Loop
 
-Inside a `filter` block:
-- `r`, `g`, `b`, `a` — channel assignment targets and source values
-- `x`, `y`, `width`, `height` — pixel position and frame metadata
-- `let name = expr;` — local intermediate variable
-- All standard math and trig functions
-- Params are referenced by their declared names
-
-### Pipe Stages
-
-```edt
-frame -> filter_name(arg1, arg2)[x_start..x_end, y_start..y_end]
+```
+for i in 0..10 {
+    export(img, "frame_{}.png");
+}
 ```
 
-The `[x_range, y_range]` bracket suffix is optional. Ranges support an optional step: `0..width..2` for every other column.
+Iterates over a range. The loop variable `i` is available as a `Number` inside the body. The body contains top-level items (assignments, exports, prints, filter applications). Nested for loops are allowed.
 
-### Imports
+### If / Else (top-level)
 
-```edt
-import std::color;          
-import "path/to/file.drive" as alias;
+```
+if mode == 1 {
+    export(img -> grayscale(), "gray.png");
+} else {
+    export(img, "color.png");
+}
 ```
 
-Imported filters and kernels are merged into the current engine scope. Circular imports are detected and skipped.
+Evaluates the condition as a number (0.0 = false, anything else = true). Both branches contain top-level items. `elif` is not supported at the top level (only inside filter bodies).
 
 ---
 
-## IO
+## Pipe Expressions
 
-| Function                                  | Description                                          |
-| ----------------------------------------- | ---------------------------------------------------- |
-| `load_image(path, fmt)`                   | Loads an image as `Frame` in the specified format    |
-| `encode_image(frame, path)`               | Writes a `Frame` to a PNG file                       |
-| `decode_audio(path)`                      | Decodes an audio file into a `Track` using Symphonia |
-| `encode_wav(track, path)`                 | Writes a `Track` to a WAV file (f32 or i16)          |
-| `Video::open(path)`                       | Opens a video file for frame-by-frame decode         |
-| `VideoEncoder::open(path, source, audio)` | Opens an output container for encoding               |
+The pipe operator `->` chains filter operations on a frame. Each stage is applied sequentially.
+
+```
+result = img -> brightness(20) -> contrast(1.2) -> blur(5);
+```
+
+### Pipe Stage Syntax
+
+```
+frame -> filter_name(arg1, arg2)
+frame -> filter_name(arg1)[x_range, y_range]
+```
+
+The optional `[x_range, y_range]` mask restricts the operation to a rectangular region:
+
+```
+img -> brightness(30)[100..500, 200..400]
+```
+
+Ranges use `start..end` or `start..end..step`.
+
+### Built-in Pipe Operations
+
+These are handled natively by the pipeline executor and are not DSL-defined filters:
+
+| Name | Syntax | Description |
+|------|--------|-------------|
+| `resize` | `resize(width, height)` | Nearest-neighbor resize |
+| `crop` | `crop(x, y, width, height)` | Crop a sub-region |
+| `blend` | `blend(x, y, frame2, alpha)` | Composite `frame2` onto the frame at position `(x, y)` with `alpha` in [0.0, 1.0] |
+| `blur` | `blur(size)` | Box blur with a dynamically-sized kernel (size is auto-rounded to odd) |
+
+Any declared `kernel` can also be used as a pipe stage by its name (no arguments):
+
+```
+img -> sharpen()
+```
 
 ---
 
-## Dependencies
+## Filter Declaration
 
-| Crate         | Role                                                     |
-| ------------- | -------------------------------------------------------- |
-| `ffmpeg-next` | Video decode/encode, pixel format conversion via swscale |
-| `image`       | Still image load/save                                    |
-| `symphonia`   | Audio file decoding (MP3, FLAC, WAV, AAC, ...)           |
-| `hound`       | WAV encoding                                             |
-| `fontdue`     | Font rasterization for text overlays                     |
+Filters are pure, stateless, per-pixel transformations. They are the primary way to define new operations.
+
+```
+filter brightness(amount) {
+    r = r + amount;
+    g = g + amount;
+    b = b + amount;
+}
+```
+
+### Structure
+
+```
+filter name(param1, param2, ...) {
+    // statements
+}
+```
+
+### Statements Valid Inside a Filter Body
+
+#### Channel Assignment
+
+```
+r = <expr>;
+g = <expr>;
+b = <expr>;
+a = <expr>;
+```
+
+Each channel is assigned independently. Unassigned channels pass through unchanged. You can assign the same channel multiple times; the last assignment wins.
+
+**`t` (time) is not valid inside `filter` bodies.** reserved for  `effect` .
+
+#### Let Binding
+
+```
+let luma = 0.299 * r + 0.587 * g + 0.114 * b;
+r = luma;
+g = luma;
+b = luma;
+```
+
+Let bindings compute a value once and store it in a local slot. The value is re-computed per pixel (locals are per-pixel VM state, not global constants). Let bindings are available to all subsequent statements including channel assignments and other let bindings.
+
+#### If / Else / Elif
+
+```
+filter threshold(cutoff) {
+    let luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    if luma > cutoff {
+        r = 255;
+        g = 255;
+        b = 255;
+    } else {
+        r = 0;
+        g = 0;
+        b = 0;
+    }
+}
+```
+
+```
+filter grade(level) {
+    if level == 1 {
+        r = r * 1.2;
+    } elif level == 2 {
+        r = r * 0.8;
+    } else {
+        r = r;
+    }
+}
+```
+
+- `elif` chains are supported inside filter body.
+- Condition is a number expression: 0.0 is false, anything else is true.
+- Both branches can contain channel assignments and let bindings.
+- Let bindings declared inside a branch are scoped to that branch only.
+
+### Expressions Valid in Filter Bodies
+
+#### Built-in Identifiers
+
+| Name | Meaning |
+|------|---------|
+| `r` | Red channel of the current pixel (0–255) |
+| `g` | Green channel |
+| `b` | Blue channel |
+| `a` | Alpha channel |
+| `x` | X coordinate of the current pixel |
+| `y` | Y coordinate of the current pixel |
+| `width` | Frame width in pixels |
+| `height` | Frame height in pixels |
+
+#### Arithmetic Operators
+
+`+`, `-`, `*`, `/`, `%` (modulo), `^` is not syntax — use `pow(a, b)`.
+
+#### Comparison Operators (produce 1.0 or 0.0)
+
+`==`, `!=`, `>`, `>=`, `<`, `<=`
+
+#### Logical Operators (produce 1.0 or 0.0)
+
+`and`, `or`, `not`
+
+#### Unary
+
+`-expr` (negation), `not expr`
+
+#### Built-in Math Functions
+
+| Function | Args | Description |
+|----------|------|-------------|
+| `abs(x)` | 1 | Absolute value |
+| `sin(x)` | 1 | Sine (radians) |
+| `cos(x)` | 1 | Cosine (radians) |
+| `tan(x)` | 1 | Tangent (radians) |
+| `asin(x)` | 1 | Arc sine |
+| `acos(x)` | 1 | Arc cosine |
+| `atan(x)` | 1 | Arc tangent |
+| `sqrt(x)` | 1 | Square root |
+| `exp(x)` | 1 | e^x |
+| `log(x)` | 1 | Natural log |
+| `log10(x)` | 1 | Base-10 log |
+| `floor(x)` | 1 | Round down |
+| `ceil(x)` | 1 | Round up |
+| `round(x)` | 1 | Round to nearest |
+| `min(a, b)` | 2 | Minimum |
+| `max(a, b)` | 2 | Maximum |
+| `pow(a, b)` | 2 | a raised to b |
+| `clamp(v, lo, hi)` | 3 | Clamp v to [lo, hi] |
+| `lerp(a, b, t)` | 3 | Linear interpolate between a and b |
+| `smooth_lerp(a, b, t)` | 3 | Smoothstep interpolation (t clamped to [0,1]) |
+
+#### Literals
+
+Integer: `42`, `-1`
+Float: `3.14`, `0.5`
+String literals are not valid in filter expression context.
+
+### What is NOT Valid Inside a Filter Body
+
+- Top-level items (`load`, `export`, `import`, `for`, `print`)
+- Pipe expressions (`->`)
+- Frame values or calls that return frames (`load`, `blank`, `text`)
+- Array literals
+- The `t` channel (reserved for  `effect` )
+
 
 ---
 
-## Roadmap
+## Ranges
 
-- `ChannelOp` linear coefficient representation for `Filter`
-- Non-square `Kernel` support
-- Fused `PipelineOp` pass (stacking point filters in a single pixel traversal)
-- `SequencePipeline` and `Effect` types for frame-level temporal operations
-- Parameterized composite filters via `Expr` substitution pass
-- `ffmpeg-the-third` migration (replacing `ffmpeg-next`)
-- Reel binary intermediate format integration
-- Audio pipeline: parallel `AudioPipeline` with `AudioFilter`, `AudioKernel`, `AudioEffect`
+Used in for loops and pipe stage masks.
+
+```
+0..10        // 0, 1, 2, ..., 9 (exclusive end)
+0..100..5    // 0, 5, 10, ..., 95 (with step)
+```
+
+---
+
+## Type System Summary
+
+The DSL has three runtime value types at the engine level:
+
+| Type | Created by |
+|------|------------|
+| `Frame` | `load()`, `blank()`, `text()`, pipe expressions |
+| `Number` | Integer/float literals, arithmetic expressions, for loop variables |
+| `String` | String literals (`"..."`) |
+
+Filter  parameters are always `Number` (passed as `f32` to the VM).
+
+---
+
+## Known Limitations (V1)
+
+- `import "file" as alias` — the alias is ignored; the file's definitions are merged into the global scope.
+- Kernel `divisor` and `bias` cannot be set from the DSL; divisor is auto-computed from weight sum.
+- `Mask::Circle` is not reachable from pipe stage syntax (only `Rect` masks via `[x..y, x..y]`).
+- Composite filters (a filter body that calls other filters) are not yet supported.
+

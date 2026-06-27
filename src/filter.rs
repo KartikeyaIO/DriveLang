@@ -99,6 +99,8 @@ pub enum Instruction {
     Min,
     Max,
     Clamp,
+    Lerp,
+    SmoothLerp,
 
     Sin,
     Cos,
@@ -112,8 +114,12 @@ pub enum Instruction {
     Exp,
     Log,
     Log10,
+    
+    
 
     Floor,
+    Jump(usize),
+    JumpIfFalse(usize),
     Ceil,
     Round,
     StoreLocal(usize),
@@ -151,15 +157,23 @@ impl FilterVM {
     fn push(&mut self, value: f32) {
         self.stack.push(value);
     }
-
-    pub fn execute(&mut self, program: &[Instruction], ctx: &PixelContext, params: &[f32]) -> f32 {
-        self.stack.clear();
-
-        for instruction in program {
+    fn run_program(&mut self, program: &[Instruction], ctx: &PixelContext, params: &[f32]) {
+        let mut ip = 0;
+        while ip< program.len() {
+            let instruction = &program[ip];
             match instruction {
-                // -------------------------
-                // CHANNELS
-                // -------------------------
+                Instruction::Jump(target) => {
+                    ip = *target;
+                    continue; // Skip the standard ip += 1
+                }
+                Instruction::JumpIfFalse(target) => {
+                    let val = self.pop();
+                    if val == 0.0 { // Assuming 0.0 is false
+                        ip = *target;
+                        continue;
+                    }
+                }
+                
                 Instruction::LoadR => {
                     self.push(ctx.color.r() as f32);
                 }
@@ -182,16 +196,12 @@ impl FilterVM {
                 }
                 Instruction::LoadT => {}
 
-                // -------------------------
-                // PARAMS
-                // -------------------------
+                
                 Instruction::LoadParam(index) => {
                     self.push(params.get(*index).copied().unwrap_or(0.0));
                 }
 
-                // -------------------------
-                // PIXEL POSITION
-                // -------------------------
+                
                 Instruction::LoadX => {
                     self.push(ctx.x as f32);
                 }
@@ -208,9 +218,7 @@ impl FilterVM {
                     self.push(ctx.height as f32);
                 }
 
-                // -------------------------
-                // CONSTANTS
-                // -------------------------
+                
                 Instruction::PushInt(v) => {
                     self.push(*v as f32);
                 }
@@ -219,9 +227,7 @@ impl FilterVM {
                     self.push(*v);
                 }
 
-                // -------------------------
-                // ARITHMETIC
-                // -------------------------
+                
                 Instruction::Add => {
                     let b = self.pop();
                     let a = self.pop();
@@ -269,9 +275,7 @@ impl FilterVM {
                     self.push(a.powf(b));
                 }
 
-                // -------------------------
-                // UNARY
-                // -------------------------
+               
                 Instruction::Neg => {
                     let a = self.pop();
                     self.push(-a);
@@ -282,9 +286,7 @@ impl FilterVM {
                     self.push(a.abs());
                 }
 
-                // -------------------------
-                // COMPARISON
-                // -------------------------
+                
                 Instruction::Eq => {
                     let b = self.pop();
                     let a = self.pop();
@@ -321,9 +323,7 @@ impl FilterVM {
                     self.push((a <= b) as u8 as f32);
                 }
 
-                // -------------------------
-                // LOGIC
-                // -------------------------
+                
                 Instruction::And => {
                     let b = self.pop();
                     let a = self.pop();
@@ -344,9 +344,7 @@ impl FilterVM {
                     self.push((a == 0.0) as u8 as f32);
                 }
 
-                // -------------------------
-                // MIN/MAX
-                // -------------------------
+                
                 Instruction::Min => {
                     let b = self.pop();
                     let a = self.pop();
@@ -368,10 +366,31 @@ impl FilterVM {
 
                     self.push(value.clamp(min, max));
                 }
+                Instruction::Lerp => {
+                     let t = self.pop();
+                     let b = self.pop();
+                     let a = self.pop();
 
-                // -------------------------
-                // TRIG
-                // -------------------------
+    
+                     self.push(a + t * (b - a));
+                    }
+
+                    Instruction::SmoothLerp => {
+                        let t_raw = self.pop();
+                        let b = self.pop();
+                        let a = self.pop();
+
+                       
+                        let t = t_raw.clamp(0.0, 1.0);
+
+                        
+                        let smooth_t = t * t * (3.0 - 2.0 * t);
+
+                        
+                        self.push(a + smooth_t * (b - a));
+                    }
+
+                
                 Instruction::Sin => {
                     let x = { self.pop().sin() };
                     self.push(x);
@@ -425,9 +444,7 @@ impl FilterVM {
                     self.push(x);
                 }
 
-                // -------------------------
-                // ROUNDING
-                // -------------------------
+                
                 Instruction::Floor => {
                     let x = { self.pop().floor() };
                     self.push(x);
@@ -454,7 +471,15 @@ impl FilterVM {
                     self.push(val);
                 }
             }
+            ip +=1;
         }
+    }
+
+    pub fn execute(&mut self, program: &[Instruction], ctx: &PixelContext, params: &[f32]) -> f32 {
+        self.stack.clear();
+        self.run_program(program, ctx, params);
+
+        
 
         self.pop()
     }

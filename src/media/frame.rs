@@ -595,7 +595,7 @@ impl Frame {
 
         Ok(())
     }
-    pub fn blend_on(&mut self, pos: &Pos, frame: &Frame, alpha: f32) -> Result<(), FrameError> {
+    pub fn blend_on(&mut self, pos: &Pos, frame: &Frame, alpha: f64) -> Result<(), FrameError> {
         let Pos(x, y) = *pos;
 
         if x + frame.width > self.width || y + frame.height > self.height {
@@ -617,10 +617,10 @@ impl Frame {
                 let j = ((y + row) * self.width + (x + col)) as usize;
                 let i = (row * frame.width + col) as usize;
 
-                r[j] = (r[j] as f32 * (1.0 - alpha) + r2[i] as f32 * alpha) as u8;
-                g[j] = (g[j] as f32 * (1.0 - alpha) + g2[i] as f32 * alpha) as u8;
-                b[j] = (b[j] as f32 * (1.0 - alpha) + b2[i] as f32 * alpha) as u8;
-                a[j] = (a[j] as f32 * (1.0 - alpha) + a2[i] as f32 * alpha) as u8;
+                r[j] = (r[j] as f64 * (1.0 - alpha) + r2[i] as f64 * alpha) as u8;
+                g[j] = (g[j] as f64 * (1.0 - alpha) + g2[i] as f64 * alpha) as u8;
+                b[j] = (b[j] as f64 * (1.0 - alpha) + b2[i] as f64 * alpha) as u8;
+                a[j] = (a[j] as f64 * (1.0 - alpha) + a2[i] as f64 * alpha) as u8;
             }
         }
 
@@ -721,4 +721,69 @@ impl Frame {
             PixelData::YUV420(..) => Err(FrameError::YUVNotApplied),
         }
     }
+    pub fn resize(&self, target_w: u32, target_h: u32) -> Result<Frame, FrameError> {
+        if target_w == 0 || target_h == 0 {
+            return Err(FrameError::InvalidFrameSize);
+        }
+
+        let scale_x = self.width as f32 / target_w as f32;
+        let scale_y = self.height as f32 / target_h as f32;
+        let len = (target_w * target_h) as usize;
+
+        match &self.data {
+            PixelData::GRAY(l) => {
+                let mut out = vec![0u8; len];
+                for y in 0..target_h {
+                    for x in 0..target_w {
+                        let src_x = ((x as f32 * scale_x) as u32).min(self.width - 1);
+                        let src_y = ((y as f32 * scale_y) as u32).min(self.height - 1);
+                        out[(y * target_w + x) as usize] = l[(src_y * self.width + src_x) as usize];
+                    }
+                }
+                Frame::new(target_w, target_h, PixelData::GRAY(out))
+            }
+            PixelData::RGB(r, g, b) => {
+                let mut r_out = vec![0u8; len];
+                let mut g_out = vec![0u8; len];
+                let mut b_out = vec![0u8; len];
+
+                for y in 0..target_h {
+                    for x in 0..target_w {
+                        let src_x = ((x as f32 * scale_x) as u32).min(self.width - 1);
+                        let src_y = ((y as f32 * scale_y) as u32).min(self.height - 1);
+                        let src_idx = (src_y * self.width + src_x) as usize;
+                        let dst_idx = (y * target_w + x) as usize;
+
+                        r_out[dst_idx] = r[src_idx];
+                        g_out[dst_idx] = g[src_idx];
+                        b_out[dst_idx] = b[src_idx];
+                    }
+                }
+                Frame::new(target_w, target_h, PixelData::RGB(r_out, g_out, b_out))
+            }
+            PixelData::RGBA(r, g, b, a) => {
+                let mut r_out = vec![0u8; len];
+                let mut g_out = vec![0u8; len];
+                let mut b_out = vec![0u8; len];
+                let mut a_out = vec![0u8; len];
+
+                for y in 0..target_h {
+                    for x in 0..target_w {
+                        let src_x = ((x as f32 * scale_x) as u32).min(self.width - 1);
+                        let src_y = ((y as f32 * scale_y) as u32).min(self.height - 1);
+                        let src_idx = (src_y * self.width + src_x) as usize;
+                        let dst_idx = (y * target_w + x) as usize;
+
+                        r_out[dst_idx] = r[src_idx];
+                        g_out[dst_idx] = g[src_idx];
+                        b_out[dst_idx] = b[src_idx];
+                        a_out[dst_idx] = a[src_idx];
+                    }
+                }
+                Frame::new(target_w, target_h, PixelData::RGBA(r_out, g_out, b_out, a_out))
+            }
+            PixelData::YUV420(..) => Err(FrameError::YUVNotApplied),
+        }
+    }
 }
+

@@ -9,7 +9,7 @@ name = "drive"
 path = "src/lib.rs"
 
 [dependencies]
-ffmpeg-next = "8.1.0"
+
 fontdue = "0.9.3"
 image = "0.25.10"
 wasm-bindgen = "0.2"
@@ -25,8 +25,10 @@ web-sys = { version = "0.3", features = [
 
 symphonia = { version = "0.5", features = ["all"] }
 hound = "3.5"
+openh264 = "0.9.3"
+mp4 = "0.14.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-ffmpeg-next = "8.1.0"
+
 hound = "3.5"
 symphonia = { version = "0.5", features = ["all"] }

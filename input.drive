@@ -1,17 +1,624 @@
-import std::mask;
-import std::color;
-import std::core;
-import std::effects;
-import std::vision;
-import std::advanced;
+// ─────────────────────────────────────────────────────────────────────────────
+// DriveLang Instagram Launch Post — 15 Slides
+// Dark tech aesthetic: deep navy bg, cyan + purple accents
+// Canvas: 1080x1080 (square insta format)
+// ─────────────────────────────────────────────────────────────────────────────
 
+import "stdlib/core.drive" as core;
+import "stdlib/color.drive" as color;
+import "stdlib/effects.drive" as effects;
 
-frame = load("input_image.jpg");
-edited_frame = frame -> cyanotype()
-                     -> cinematic()
-                     -> threshold(120)
-                     -> hdr2(1.15)
-                     -> soft_blur(25);
+// ── Shared palette filters ────────────────────────────────────────────────────
 
-export(edited_frame, "Outputs/output.png");
-print("The Code was executed Successfully");
+// Deep navy background: RGB(10, 12, 30)
+filter navy_bg() {
+    r = 10;
+    g = 12;
+    b = 30;
+    a = 255;
+}
+
+// Vivid cyan accent: RGB(0, 230, 230)
+filter cyan_fill() {
+    r = 0;
+    g = 230;
+    b = 230;
+    a = 255;
+}
+
+// Purple accent: RGB(140, 60, 220)
+filter purple_fill() {
+    r = 140;
+    g = 60;
+    b = 220;
+    a = 255;
+}
+
+// Soft white for body text: RGB(220, 225, 240)
+filter white_fill() {
+    r = 220;
+    g = 225;
+    b = 240;
+    a = 255;
+}
+
+// Dark card panel: RGB(18, 22, 48)
+filter card_bg() {
+    r = 18;
+    g = 22;
+    b = 48;
+    a = 245;
+}
+
+// Thin cyan rule / divider: RGB(0, 200, 210)
+filter rule_cyan() {
+    r = 0;
+    g = 200;
+    b = 210;
+    a = 255;
+}
+
+// Gradient helper: radial glow from center (purple core → navy edge)
+filter radial_purple_glow(strength) {
+    let cx = width / 2;
+    let cy = height / 2;
+    let dx = x - cx;
+    let dy = y - cy;
+    let dist = sqrt(dx * dx + dy * dy);
+    let max_dist = sqrt(cx * cx + cy * cy);
+    let nd = dist / max_dist;
+    let glow_r = 120 * (1.0 - nd);
+    let glow_g = 10 * (1.0 - nd);
+    let glow_b = 200 * (1.0 - nd * 0.4);
+    r = clamp(r * (1.0 - strength) + glow_r * strength, 0, 255);
+    g = clamp(g * (1.0 - strength) + glow_g * strength, 0, 255);
+    b = clamp(b * (1.0 - strength) + glow_b * strength, 0, 255);
+}
+
+// Gradient helper: radial cyan glow
+filter radial_cyan_glow(strength) {
+    let cx = width / 2;
+    let cy = height / 2;
+    let dx = x - cx;
+    let dy = y - cy;
+    let dist = sqrt(dx * dx + dy * dy);
+    let max_dist = sqrt(cx * cx + cy * cy);
+    let nd = dist / max_dist;
+    let glow_r = 0;
+    let glow_g = 200 * (1.0 - nd * 0.6);
+    let glow_b = 220 * (1.0 - nd * 0.3);
+    r = clamp(r * (1.0 - strength) + glow_r * strength, 0, 255);
+    g = clamp(g * (1.0 - strength) + glow_g * strength, 0, 255);
+    b = clamp(b * (1.0 - strength) + glow_b * strength, 0, 255);
+}
+
+// Corner-fade vignette darkens edges toward black
+filter vignette(strength) {
+    let cx = width / 2;
+    let cy = height / 2;
+    let dx = x - cx;
+    let dy = y - cy;
+    let dist = sqrt(dx * dx + dy * dy);
+    let max_dist = sqrt(cx * cx + cy * cy);
+    let nd = dist / max_dist;
+    let fade = 1.0 - nd * nd * strength;
+    r = clamp(r * fade, 0, 255);
+    g = clamp(g * fade, 0, 255);
+    b = clamp(b * fade, 0, 255);
+}
+
+// Scanline grid for that "terminal" texture (every 6th row slightly darker)
+filter scanlines(depth) {
+    let row_mod = y - floor(y / 6) * 6;
+    if row_mod == 0 {
+        r = r - depth;
+        g = g - depth;
+        b = b - depth;
+    }
+}
+
+// Subtle noise grain using pixel coords as seed
+filter grain(amount) {
+    let seed = (x * 1234 + y * 5678) - floor((x * 1234 + y * 5678) / 255) * 255;
+    let noise = seed * amount / 255;
+    r = clamp(r + noise, 0, 255);
+    g = clamp(g + noise, 0, 255);
+    b = clamp(b + noise, 0, 255);
+}
+
+// Horizontal gradient: left = purple, right = cyan
+filter horizontal_gradient() {
+    let t = x / width;
+    r = clamp(140 * (1.0 - t) + 0 * t, 0, 255);
+    g = clamp(60  * (1.0 - t) + 230 * t, 0, 255);
+    b = clamp(220 * (1.0 - t) + 230 * t, 0, 255);
+    a = 255;
+}
+
+// Diagonal gradient: top-left cyan → bottom-right purple
+filter diagonal_gradient() {
+    let t = (x / width + y / height) / 2;
+    r = clamp(0   * (1.0 - t) + 140 * t, 0, 255);
+    g = clamp(200 * (1.0 - t) + 40  * t, 0, 255);
+    b = clamp(220 * (1.0 - t) + 200 * t, 0, 255);
+    a = 255;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 01 — Cover: "DriveLang" hero with radial purple glow
+// ─────────────────────────────────────────────────────────────────────────────
+s01_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_purple_glow(0.85)
+    -> vignette(1.2)
+    -> scanlines(6)
+    -> grain(4);
+
+s01_title = text("DriveLang", "test_inputs/georgia.ttf", 120, 0, 230, 230);
+s01_sub   = text("A DSL for Visual Pipelines", "test_inputs/georgia.ttf", 42, 180, 185, 210);
+s01_tag   = text("Write filters. Compose pipelines. Ship images.", "test_inputs/georgia.ttf", 28, 100, 110, 150);
+
+s01_rule = blank(800, 3) -> rule_cyan();
+
+s01 = s01_bg
+    -> blend(140, 300, s01_title, 1.0)
+    -> blend(140, 445, s01_rule, 1.0)
+    -> blend(140, 470, s01_sub,  1.0)
+    -> blend(140, 540, s01_tag,  0.85);
+
+export(s01, "Outputs/slide_01_cover.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 02 — "What is DriveLang?" — intro copy
+// ─────────────────────────────────────────────────────────────────────────────
+s02_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_cyan_glow(0.5)
+    -> vignette(1.0)
+    -> grain(3);
+
+s02_label = text("What is DriveLang?", "test_inputs/georgia.ttf", 64, 0, 230, 230);
+s02_l1    = text("A mathematical DSL for image + video", "test_inputs/georgia.ttf", 36, 210, 215, 235);
+s02_l2    = text("processing — built in Rust.", "test_inputs/georgia.ttf", 36, 210, 215, 235);
+s02_l3    = text("No loops. No buffers. Just expressions.", "test_inputs/georgia.ttf", 32, 140, 148, 180);
+s02_l4    = text("Define a filter once. Apply it forever.", "test_inputs/georgia.ttf", 32, 140, 148, 180);
+
+s02_rule = blank(600, 2) -> rule_cyan();
+s02_card = blank(800, 360) -> card_bg();
+
+s02 = s02_bg
+    -> blend(140, 160, s02_label, 1.0)
+    -> blend(140, 248, s02_rule,  1.0)
+    -> blend(140, 290, s02_card,  0.95)
+    -> blend(170, 320, s02_l1,   1.0)
+    -> blend(170, 375, s02_l2,   1.0)
+    -> blend(170, 450, s02_l3,   0.9)
+    -> blend(170, 505, s02_l4,   0.9);
+
+export(s02, "Outputs/slide_02_what.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 03 — "Write Filters Like Math" — filter syntax showcase
+// ─────────────────────────────────────────────────────────────────────────────
+s03_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> vignette(1.1)
+    -> scanlines(5)
+    -> grain(3);
+
+s03_heading = text("Write Filters Like Math", "test_inputs/georgia.ttf", 60, 140, 60, 220);
+s03_rule    = blank(700, 2) -> rule_cyan();
+
+// Code block on dark card
+s03_card  = blank(800, 380) -> card_bg();
+ s03_c1    = text("filter brightness(amount) {", "test_inputs/georgia.ttf", 28, 0, 230, 230);
+ s03_c2    = text("    r = r + amount;",          "test_inputs/georgia.ttf", 28, 220, 225, 240);
+ s03_c3    = text("    g = g + amount;",          "test_inputs/georgia.ttf", 28, 220, 225, 240);
+ s03_c4    = text("    b = b + amount;",          "test_inputs/georgia.ttf", 28, 220, 225, 240);
+ s03_c5    = text("}",                            "test_inputs/georgia.ttf", 28, 0, 230, 230);
+ s03_note  = text("That's it. One filter. Zero boilerplate.", "test_inputs/georgia.ttf", 30, 140, 148, 180);
+
+ s03 = s03_bg
+    -> blend(140, 160, s03_heading, 1.0)
+    -> blend(140, 242, s03_rule,    1.0)
+    -> blend(140, 280, s03_card,    0.95)
+    -> blend(165, 305, s03_c1,      1.0)
+    -> blend(165, 355, s03_c2,      1.0)
+    -> blend(165, 400, s03_c3,      1.0)
+    -> blend(165, 445, s03_c4,      1.0)
+    -> blend(165, 490, s03_c5,      1.0)
+    -> blend(140, 700, s03_note,    0.85);
+
+export(s03, "Outputs/slide_03_filters.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 04 — "Compose Pipelines" — pipe operator showcase
+// ─────────────────────────────────────────────────────────────────────────────
+ s04_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_purple_glow(0.4)
+    -> vignette(1.0)
+    -> grain(3);
+
+ s04_heading = text("Compose Pipelines", "test_inputs/georgia.ttf", 64, 0, 230, 230);
+ s04_rule    = blank(600, 2) -> rule_cyan();
+ s04_card    = blank(800, 300) -> card_bg();
+
+ s04_c1 = text("img = load('photo.png');",                 "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s04_c2 = text("result = img",                               "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s04_c3 = text("    -> brightness(20)",                      "test_inputs/georgia.ttf", 26, 140, 220, 140);
+ s04_c4 = text("    -> contrast(1.3)",                       "test_inputs/georgia.ttf", 26, 140, 220, 140);
+s04_c5 = text("    -> blur(5);",                            "test_inputs/georgia.ttf", 26, 140, 220, 140);
+
+s04_note = text("Chain as many stages as you need.", "test_inputs/georgia.ttf", 30, 140, 148, 180);
+
+ s04 = s04_bg
+    -> blend(140, 160, s04_heading, 1.0)
+    -> blend(140, 248, s04_rule,    1.0)
+    -> blend(140, 290, s04_card,    0.95)
+    -> blend(165, 315, s04_c1,      1.0)
+    -> blend(165, 360, s04_c2,      1.0)
+    -> blend(165, 400, s04_c3,      1.0)
+    -> blend(165, 440, s04_c4,      1.0)
+    -> blend(165, 480, s04_c5,      1.0)
+    -> blend(140, 640, s04_note,    0.85);
+
+export(s04, "Outputs/slide_04_pipeline.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 05 — "Local Variables" — let binding showcase
+// ─────────────────────────────────────────────────────────────────────────────
+ s05_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_cyan_glow(0.35)
+    -> vignette(1.1)
+    -> scanlines(4)
+    -> grain(3);
+
+s05_heading = text("Smart Local Variables", "test_inputs/georgia.ttf", 62, 140, 60, 220);
+s05_rule    = blank(700, 2) -> rule_cyan();
+s05_card    = blank(800, 360) -> card_bg();
+
+ s05_c1 = text("filter grayscale() {",                        "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s05_c2 = text("    let luma = 0.299*r + 0.587*g + 0.114*b;", "test_inputs/georgia.ttf", 24, 255, 210, 80);
+ s05_c3 = text("    r = luma;",                               "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s05_c4 = text("    g = luma;",                               "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s05_c5 = text("    b = luma;",                               "test_inputs/georgia.ttf", 26, 220, 225, 240);
+s05_c6 = text("}",                                           "test_inputs/georgia.ttf", 26, 0, 230, 230);
+
+ s05_note = text("Compute once. Use everywhere. Per pixel.", "test_inputs/georgia.ttf", 30, 140, 148, 180);
+
+ s05 = s05_bg
+    -> blend(140, 155, s05_heading, 1.0)
+    -> blend(140, 240, s05_rule,    1.0)
+    -> blend(140, 278, s05_card,    0.95)
+    -> blend(165, 305, s05_c1,      1.0)
+    -> blend(165, 352, s05_c2,      1.0)
+    -> blend(165, 395, s05_c3,      1.0)
+    -> blend(165, 435, s05_c4,      1.0)
+    -> blend(165, 475, s05_c5,      1.0)
+    -> blend(165, 515, s05_c6,      1.0)
+    -> blend(140, 690, s05_note,    0.85);
+
+export(s05, "Outputs/slide_05_letbindings.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 06 — "Conditional Pixel Logic" — if/else showcase
+// ─────────────────────────────────────────────────────────────────────────────
+ s06_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> vignette(1.2)
+    -> grain(4);
+
+ s06_heading = text("Conditional Pixel Logic", "test_inputs/georgia.ttf", 58, 0, 230, 230);
+ s06_rule    = blank(700, 2) -> rule_cyan();
+ s06_card    = blank(800, 400) -> card_bg();
+
+ s06_c1 = text("filter threshold(cutoff) {",    "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s06_c2 = text("    let luma = (r+g+b) / 3;",  "test_inputs/georgia.ttf", 26, 255, 210, 80);
+ s06_c3 = text("    if luma > cutoff {",        "test_inputs/georgia.ttf", 26, 180, 140, 255);
+ s06_c4 = text("        r = 255; g = 255;",     "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s06_c5 = text("    } else {",                  "test_inputs/georgia.ttf", 26, 180, 140, 255);
+ s06_c6 = text("        r = 0; g = 0; b = 0;", "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s06_c7 = text("    }",                         "test_inputs/georgia.ttf", 26, 180, 140, 255);
+ s06_c8 = text("}",                             "test_inputs/georgia.ttf", 26, 0, 230, 230);
+
+ s06 = s06_bg
+    -> blend(140, 145, s06_heading, 1.0)
+    -> blend(140, 225, s06_rule,    1.0)
+    -> blend(140, 262, s06_card,    0.95)
+    -> blend(165, 288, s06_c1,      1.0)
+    -> blend(165, 330, s06_c2,      1.0)
+    -> blend(165, 368, s06_c3,      1.0)
+    -> blend(165, 405, s06_c4,      1.0)
+    -> blend(165, 443, s06_c5,      1.0)
+    -> blend(165, 480, s06_c6,      1.0)
+    -> blend(165, 518, s06_c7,      1.0)
+    -> blend(165, 555, s06_c8,      1.0);
+
+export(s06, "Outputs/slide_06_ifelse.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 07 — "Mask Regions" — spatial mask showcase
+// ─────────────────────────────────────────────────────────────────────────────
+ s07_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_purple_glow(0.5)
+    -> vignette(1.1)
+    -> scanlines(5)
+    -> grain(3);
+
+ s07_heading = text("Apply Filters to Regions", "test_inputs/georgia.ttf", 60, 0, 230, 230);
+ s07_rule    = blank(700, 2) -> rule_cyan();
+ s07_card    = blank(800, 220) -> card_bg();
+ s07_c1 = text("// Only blur the left half",             "test_inputs/georgia.ttf", 24, 90, 100, 140);
+ s07_c2 = text("img -> blur(10)[0..540, 0..1080];",     "test_inputs/georgia.ttf", 27, 140, 220, 140);
+ s07_c3 = text("// Brighten a specific rect",            "test_inputs/georgia.ttf", 24, 90, 100, 140);
+ s07_c4 = text("img -> brightness(40)[200..800, 300..700];", "test_inputs/georgia.ttf", 25, 140, 220, 140);
+ s07_note  = text("Pixel-perfect regional control.", "test_inputs/georgia.ttf", 34, 210, 215, 235);
+ s07_note2 = text("No layer system needed.", "test_inputs/georgia.ttf", 30, 140, 148, 180);
+ s07 = s07_bg
+    -> blend(140, 148, s07_heading, 1.0)
+    -> blend(140, 230, s07_rule,    1.0)
+    -> blend(140, 268, s07_card,    0.95)
+    -> blend(165, 292, s07_c1,      0.7)
+    -> blend(165, 328, s07_c2,      1.0)
+    -> blend(165, 378, s07_c3,      0.7)
+    -> blend(165, 414, s07_c4,      1.0)
+    -> blend(140, 560, s07_note,    1.0)
+    -> blend(140, 610, s07_note2,   0.8);
+
+export(s07, "Outputs/slide_07_masks.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 08 — "Convolution Kernels" — kernel declaration showcase
+// ─────────────────────────────────────────────────────────────────────────────
+ s08_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_cyan_glow(0.4)
+    -> vignette(1.0)
+    -> grain(3);
+
+ s08_heading = text("Convolution Kernels", "test_inputs/georgia.ttf", 64, 140, 60, 220);
+ s08_rule    = blank(640, 2) -> rule_cyan();
+ s08_card    = blank(800, 340) -> card_bg();
+ s08_c1 = text("kernel sharpen = [",        "test_inputs/georgia.ttf", 27, 0, 230, 230);
+ s08_c2 = text("    [ 0, -1,  0],",         "test_inputs/georgia.ttf", 27, 220, 225, 240);
+ s08_c3 = text("    [-1,  5, -1],",         "test_inputs/georgia.ttf", 27, 220, 225, 240);
+ s08_c4 = text("    [ 0, -1,  0]",          "test_inputs/georgia.ttf", 27, 220, 225, 240);
+ s08_c5 = text("];",                         "test_inputs/georgia.ttf", 27, 0, 230, 230);
+ s08_c6 = text("img -> sharpen();",          "test_inputs/georgia.ttf", 28, 140, 220, 140);
+ s08_note = text("Define the math. The engine does the rest.", "test_inputs/georgia.ttf", 30, 140, 148, 180);
+ s08 = s08_bg
+    -> blend(140, 148, s08_heading, 1.0)
+    -> blend(140, 235, s08_rule,    1.0)
+    -> blend(140, 272, s08_card,    0.95)
+    -> blend(165, 300, s08_c1,      1.0)
+    -> blend(165, 342, s08_c2,      1.0)
+    -> blend(165, 380, s08_c3,      1.0)
+    -> blend(165, 418, s08_c4,      1.0)
+    -> blend(165, 456, s08_c5,      1.0)
+    -> blend(165, 510, s08_c6,      1.0)
+    -> blend(140, 680, s08_note,    0.85);
+
+export(s08, "Outputs/slide_08_kernels.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 09 — "For Loops & Batch Export" — loop showcase
+// ─────────────────────────────────────────────────────────────────────────────
+ s09_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> vignette(1.2)
+    -> scanlines(5)
+    -> grain(4);
+
+ s09_heading = text("Batch Processing", "test_inputs/georgia.ttf", 68, 0, 230, 230);
+ s09_sub     = text("Loop over anything.", "test_inputs/georgia.ttf", 36, 180, 185, 210);
+ s09_rule    = blank(560, 2) -> rule_cyan();
+ s09_card    = blank(800, 300) -> card_bg();
+ s09_c1 = text("for i in 1..6 {",                           "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s09_c2 = text("    img = load('frame_{}.png');",         "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s09_c3 = text("    out = img -> brightness(i * 10);",      "test_inputs/georgia.ttf", 26, 140, 220, 140);
+ s09_c4 = text("    export(out, 'result_{}.png');",       "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s09_c5 = text("}",                                         "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s09 = s09_bg
+    -> blend(140, 140, s09_heading, 1.0)
+    -> blend(140, 226, s09_sub,     0.85)
+    -> blend(140, 282, s09_rule,    1.0)
+    -> blend(140, 316, s09_card,    0.95)
+    -> blend(165, 342, s09_c1,      1.0)
+    -> blend(165, 382, s09_c2,      1.0)
+    -> blend(165, 420, s09_c3,      1.0)
+    -> blend(165, 458, s09_c4,      1.0)
+    -> blend(165, 498, s09_c5,      1.0);
+
+export(s09, "Outputs/slide_09_loops.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 10 — "Built-in Math" — builtins reference card
+// ─────────────────────────────────────────────────────────────────────────────
+ s10_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_purple_glow(0.45)
+    -> vignette(1.1)
+    -> grain(3);
+
+ s10_heading = text("Built-in Math Functions", "test_inputs/georgia.ttf", 58, 140, 60, 220);
+ s10_rule    = blank(720, 2) -> rule_cyan();
+ s10_card    = blank(800, 460) -> card_bg();
+ s10_r1 = text("sin  cos  tan  asin  acos  atan", "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s10_r2 = text("sqrt  exp  log  log10  pow",       "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s10_r3 = text("floor  ceil  round  abs",          "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s10_r4 = text("min  max  clamp",                  "test_inputs/georgia.ttf", 26, 140, 220, 140);
+ s10_r5 = text("lerp  smooth_lerp",                "test_inputs/georgia.ttf", 26, 140, 220, 140);
+ s10_r6 = text("r  g  b  a  x  y  width  height", "test_inputs/georgia.ttf", 26, 255, 210, 80);
+ s10_note = text("Everything you need to express any pixel transform.", "test_inputs/georgia.ttf", 28, 140, 148, 180);
+ s10 = s10_bg
+    -> blend(140, 140, s10_heading, 1.0)
+    -> blend(140, 222, s10_rule,    1.0)
+    -> blend(140, 260, s10_card,    0.95)
+    -> blend(165, 288, s10_r1,      1.0)
+    -> blend(165, 338, s10_r2,      1.0)
+    -> blend(165, 388, s10_r3,      1.0)
+    -> blend(165, 450, s10_r4,      1.0)
+    -> blend(165, 500, s10_r5,      1.0)
+    -> blend(165, 565, s10_r6,      1.0)
+    -> blend(140, 780, s10_note,    0.8);
+
+export(s10, "Outputs/slide_10_builtins.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 11 — "Stdlib Included" — stdlib overview
+// ─────────────────────────────────────────────────────────────────────────────
+ s11_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_cyan_glow(0.4)
+    -> vignette(1.0)
+    -> scanlines(4)
+    -> grain(3);
+
+ s11_heading = text("Batteries Included", "test_inputs/georgia.ttf", 68, 0, 230, 230);
+ s11_sub     = text("A growing stdlib — all written in DriveLang.", "test_inputs/georgia.ttf", 32, 180, 185, 210);
+ s11_rule    = blank(800, 2) -> rule_cyan();
+ s11_card = blank(800, 420) -> card_bg();
+ s11_l1 = text("std::core    — brightness, contrast, gamma, clamp", "test_inputs/georgia.ttf", 22, 0, 230, 230);
+ s11_l2 = text("std::color   — sepia, warm, cool, vivid, vintage",  "test_inputs/georgia.ttf", 22, 140, 220, 140);
+ s11_l3 = text("std::effects — dramatic, dream, cinematic, bloom",   "test_inputs/georgia.ttf", 22, 255, 210, 80);
+ s11_l4 = text("std::image   — posterize, fade, monochrome",         "test_inputs/georgia.ttf", 22, 180, 140, 255);
+ s11_l5 = text("std::vision  — (coming soon)",                       "test_inputs/georgia.ttf", 22, 90, 100, 130);
+ s11_l6 = text("std::mask    — (coming soon)",                       "test_inputs/georgia.ttf", 22, 90, 100, 130);
+ s11_note = text("Import any module in one line.", "test_inputs/georgia.ttf", 30, 140, 148, 180);
+ s11 = s11_bg
+    -> blend(140, 130, s11_heading, 1.0)
+    -> blend(140, 216, s11_sub,     0.88)
+    -> blend(140, 270, s11_rule,    1.0)
+    -> blend(140, 306, s11_card,    0.95)
+    -> blend(165, 332, s11_l1,      1.0)
+    -> blend(165, 380, s11_l2,      1.0)
+    -> blend(165, 428, s11_l3,      1.0)
+    -> blend(165, 476, s11_l4,      1.0)
+    -> blend(165, 524, s11_l5,      0.6)
+    -> blend(165, 572, s11_l6,      0.6)
+    -> blend(140, 780, s11_note,    0.85);
+
+export(s11, "Outputs/slide_11_stdlib.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 12 — "The Pipe Operator" — philosophy slide, minimal design
+// ─────────────────────────────────────────────────────────────────────────────
+ s12_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_purple_glow(0.7)
+    -> vignette(1.3)
+    -> grain(5);
+
+// Large decorative "->" using a gradient strip
+ s12_deco = blank(800, 6) -> horizontal_gradient();
+ s12_hero  = text("->", "test_inputs/georgia.ttf", 200, 0, 230, 230);
+ s12_h1    = text("The pipe operator.", "test_inputs/georgia.ttf", 56, 210, 215, 235);
+ s12_h2    = text("Your image flows through every stage.", "test_inputs/georgia.ttf", 34, 140, 148, 180);
+ s12_h3    = text("Each filter sees the result of the last.", "test_inputs/georgia.ttf", 30, 110, 118, 155);
+ s12 = s12_bg
+    -> blend(290, 160, s12_hero,  1.0)
+    -> blend(140, 440, s12_deco,  1.0)
+    -> blend(140, 468, s12_h1,    1.0)
+    -> blend(140, 548, s12_h2,    0.9)
+    -> blend(140, 608, s12_h3,    0.75);
+
+export(s12, "Outputs/slide_12_pipe.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 13 — "Blend & Composite" — compositing showcase
+// ─────────────────────────────────────────────────────────────────────────────
+ s13_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> radial_cyan_glow(0.3)
+    -> vignette(1.0)
+    -> grain(3);
+
+ s13_heading = text("Blend & Composite", "test_inputs/georgia.ttf", 64, 140, 60, 220);
+ s13_rule    = blank(580, 2) -> rule_cyan();
+ s13_card    = blank(800, 280) -> card_bg();
+ s13_c1 = text("canvas = blank(1080, 1080);",              "test_inputs/georgia.ttf", 26, 0, 230, 230);
+ s13_c2 = text("logo   = load('logo.png');",             "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s13_c3 = text("label  = text('Hello', font, 48, ...);", "test_inputs/georgia.ttf", 26, 220, 225, 240);
+ s13_c4 = text("canvas -> blend(100, 400, logo,  1.0)",    "test_inputs/georgia.ttf", 26, 140, 220, 140);
+ s13_c5 = text("       -> blend(100, 700, label, 0.9);",   "test_inputs/georgia.ttf", 26, 140, 220, 140);
+ s13_note = text("Build any layout — no graphic editor needed.", "test_inputs/georgia.ttf", 30, 140, 148, 180);
+ s13 = s13_bg
+    -> blend(140, 148, s13_heading, 1.0)
+    -> blend(140, 235, s13_rule,    1.0)
+    -> blend(140, 272, s13_card,    0.95)
+    -> blend(165, 300, s13_c1,      1.0)
+    -> blend(165, 340, s13_c2,      1.0)
+    -> blend(165, 378, s13_c3,      1.0)
+    -> blend(165, 430, s13_c4,      1.0)
+    -> blend(165, 468, s13_c5,      1.0)
+    -> blend(140, 640, s13_note,    0.85);
+
+export(s13, "Outputs/slide_13_blend.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 14 — "Built with Rust" — tech credibility slide
+// ─────────────────────────────────────────────────────────────────────────────
+ s14_bg = blank(1080, 1080)
+    -> navy_bg()
+    -> vignette(1.2)
+    -> scanlines(5)
+    -> grain(4);
+
+ s14_heading = text("Built with Rust.", "test_inputs/georgia.ttf", 72, 220, 225, 240);
+ s14_rule_g  = blank(800, 4) -> horizontal_gradient();
+ s14_card = blank(800, 340) -> card_bg();
+ s14_l1   = text("Bytecode VM — zero interpreter overhead",     "test_inputs/georgia.ttf", 30, 0, 230, 230);
+ s14_l2   = text("Per-pixel parallelism via Rayon",             "test_inputs/georgia.ttf", 30, 0, 230, 230);
+ s14_l3   = text("Filters compile to typed instruction sets",   "test_inputs/georgia.ttf", 30, 0, 230, 230);
+ s14_l4   = text("RGBA canonical — format-safe pipelines",      "test_inputs/georgia.ttf", 30, 0, 230, 230);
+ s14_l5   = text("WASM target in progress",                     "test_inputs/georgia.ttf",   28, 140, 148, 180);
+ s14 = s14_bg
+    -> blend(140, 148, s14_heading, 1.0)
+    -> blend(140, 240, s14_rule_g,  1.0)
+    -> blend(140, 262, s14_card,    0.95)
+    -> blend(165, 292, s14_l1,      1.0)
+    -> blend(165, 342, s14_l2,      1.0)
+    -> blend(165, 392, s14_l3,      1.0)
+    -> blend(165, 442, s14_l4,      1.0)
+    -> blend(165, 510, s14_l5,      0.7);
+
+export(s14, "Outputs/slide_14_rust.png");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SLIDE 15 — Closing CTA with diagonal gradient background + bordered card
+// ─────────────────────────────────────────────────────────────────────────────
+ s15_bg = blank(1080, 1080)
+    -> diagonal_gradient()
+    -> vignette(0.8)
+    -> grain(3);
+
+// Dark card in center for text legibility
+ s15_card  = blank(840, 580) -> card_bg();
+//Cyan border strips (top + bottom of card)
+ s15_top_border    = blank(840, 4) -> rule_cyan();
+ s15_bottom_border = blank(840, 4) -> rule_cyan();
+ s15_h1 = text("DriveLang", "test_inputs/georgia.ttf", 90, 220, 225, 240);
+ s15_h2 = text("Write Less. Express More.", "test_inputs/georgia.ttf", 42, 0, 230, 230);
+ s15_rule = blank(600, 2) -> white_fill();
+ s15_l1 = text("Open source. Built in public.", "test_inputs/georgia.ttf", 32, 200, 205, 225);
+ s15_l2 = text("github.com/KartikeyaIO/DriveLang",   "test_inputs/georgia.ttf", 28, 140, 220, 140);
+ s15_l3 = text("Follow for updates.",           "test_inputs/georgia.ttf",   28, 160, 165, 190);
+ s15_tag = text("#DriveLang #Rust #DSL #ImageProcessing", "test_inputs/georgia.ttf", 22, 110, 118, 145);
+ s15 = s15_bg
+    -> blend(120, 210, s15_card,          0.92)
+    -> blend(120, 210, s15_top_border,    1.0)
+    -> blend(120, 786, s15_bottom_border, 1.0)
+    -> blend(165, 248, s15_h1,            1.0)
+    -> blend(165, 360, s15_h2,            1.0)
+    -> blend(165, 430, s15_rule,          0.6)
+    -> blend(165, 460, s15_l1,            0.95)
+    -> blend(165, 520, s15_l2,            1.0)
+    -> blend(165, 580, s15_l3,            0.8)
+    -> blend(140, 880, s15_tag,           0.6);
+
+export(s15, "Outputs/slide_15_cta.png");
+
+print("All 15 slides exported to Outputs/");

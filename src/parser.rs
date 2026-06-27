@@ -1,5 +1,6 @@
 use crate::lexer::{Token, TokenKind};
 
+
 // ─────────────────────────────────────────────────────────────────────────
 // AST
 // ─────────────────────────────────────────────────────────────────────────
@@ -54,6 +55,8 @@ pub enum Expr {
     // NEW: Array literals for Kernel matrices like `[[1, 2, 1], [2, 4, 2], [1, 2, 1]]`
     Array(Vec<Expr>),
     Not(Box<Expr>),
+    
+    
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -82,6 +85,16 @@ pub struct ChannelAssign {
 pub enum Statement {
     Channel(ChannelAssign),
     Let { name: String, value: Expr },
+    
+
+    IfElse {
+        cond: Box<Expr>,
+        true_branch: Vec<Statement>,
+        false_branch: Vec<Statement>,
+    },
+    
+    
+
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -103,11 +116,21 @@ pub enum Item {
     Import(Import),
     Print { args: Vec<Expr> },
     Assign { name: String, value: Expr },
-    EffectDecl(EffectDecl),
+    //EffectDecl(EffectDecl),
     FilterDecl(FilterDecl),
     // NEW: Kernel Declaration, e.g., kernel blur = [[1.0, 2.0], [3.0, 4.0]];
     KernelDecl { name: String, matrix: Expr },
     Export { value: Expr, path: Expr },
+    ForLoop {
+        variable: String,
+        range: Box<Expr>,
+        items : Vec<Item>,
+    },
+    IfElse {
+        cond: Box<Expr>,
+        true_branch: Vec<Item>,
+        false_branch: Vec<Item>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -254,6 +277,43 @@ impl<'a> Parser<'a> {
             TokenKind::Export => self.parse_export(),
             TokenKind::Identifier => self.parse_assignment(),
             TokenKind::Print => self.parse_print(),
+            TokenKind::For => {
+                self.advance();
+                let variable = self.expect_identifier("loop variable name")?;
+                self.expect(TokenKind::In, "in")?;
+                let range = Box::new(self.parse_expr()?);
+                self.expect(TokenKind::LeftBrace, "{")?;
+                
+                let mut items = Vec::new();
+                while !self.check(&TokenKind::RightBrace) {
+                    items.push(self.parse_item()?);
+                }
+                self.expect(TokenKind::RightBrace, "}")?;
+                
+                Ok(Item::ForLoop { variable, range, items })
+            }
+            TokenKind::If => {
+                // (Very similar to statement if/else, just for Items!)
+                self.advance();
+                let cond = Box::new(self.parse_expr()?);
+                self.expect(TokenKind::LeftBrace, "{")?;
+                let mut true_branch = Vec::new();
+                while !self.check(&TokenKind::RightBrace) {
+                    true_branch.push(self.parse_item()?);
+                }
+                self.expect(TokenKind::RightBrace, "}")?;
+
+                let mut false_branch = Vec::new();
+                if self.check(&TokenKind::Else) {
+                    self.advance();
+                    self.expect(TokenKind::LeftBrace, "{")?;
+                    while !self.check(&TokenKind::RightBrace) {
+                        false_branch.push(self.parse_item()?);
+                    }
+                    self.expect(TokenKind::RightBrace, "}")?;
+                }
+                Ok(Item::IfElse { cond, true_branch, false_branch })
+            }
             other => Err(ParseError::UnexpectedToken {
                 expected: "import, filter, kernel, export, or assignment".to_string(),
                 found: other.clone(),
@@ -322,66 +382,39 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::LeftBrace, "'{'")?;
         let mut body = Vec::new();
         while !self.check(&TokenKind::RightBrace) {
-            match self.peek_kind() {
-                TokenKind::Let => {
-                    self.advance();
-                    let name = self.expect_identifier("A variable Name!!")?;
-                    self.expect(TokenKind::Equal, "=");
-                    let value = self.parse_expr()?;
-                    self.expect(TokenKind::SemiColon, "';'")?;
-                    body.push(Statement::Let { name, value });
-                }
-
-                _ => {
-                    let channel_assign = self.parse_channel_assign("filter")?;
-                    body.push(Statement::Channel(channel_assign));
-                }
-            }
+           body.push(self.parse_statement("filter")?);
         }
         self.expect(TokenKind::RightBrace, "'}'")?;
 
         Ok(Item::FilterDecl(FilterDecl { name, params, body }))
     }
     // Effect Declarations...
-    fn parse_effect_decl(&mut self) -> PResult<Item> {
-        self.expect(TokenKind::Effect, "'effect'")?;
-        let name = self.expect_identifier("an effect name")?;
+    // fn parse_effect_decl(&mut self) -> PResult<Item> {
+    //     self.expect(TokenKind::Effect, "'effect'")?;
+    //     let name = self.expect_identifier("an effect name")?;
 
-        self.expect(TokenKind::LeftParen, "'('")?;
-        let mut params = Vec::new();
-        if !self.check(&TokenKind::RightParen) {
-            loop {
-                params.push(self.expect_identifier("a parameter name")?);
-                if self.check(&TokenKind::Comma) {
-                    self.advance();
-                } else {
-                    break;
-                }
-            }
-        }
-        self.expect(TokenKind::RightParen, "')'")?;
+    //     self.expect(TokenKind::LeftParen, "'('")?;
+    //     let mut params = Vec::new();
+    //     if !self.check(&TokenKind::RightParen) {
+    //         loop {
+    //             params.push(self.expect_identifier("a parameter name")?);
+    //             if self.check(&TokenKind::Comma) {
+    //                 self.advance();
+    //             } else {
+    //                 break;
+    //             }
+    //         }
+    //     }
 
-        self.expect(TokenKind::LeftBrace, "'{'")?;
-        let mut body = Vec::new();
-        while !self.check(&TokenKind::RightBrace) {
-            match self.peek_kind() {
-                TokenKind::Let => {
-                    self.advance();
-                    let name = self.expect_identifier("A variable Name!!")?;
-                    self.expect(TokenKind::Equal, "=");
-                    let value = self.parse_expr()?;
-                    self.expect(TokenKind::SemiColon, "';'")?;
-                    body.push(Statement::Let { name, value });
-                }
+    //     self.expect(TokenKind::RightParen, "')'")?;
 
-                _ => {
-                    let channel_assign = self.parse_channel_assign("effect")?;
-                    body.push(Statement::Channel(channel_assign));
-                }
-            }
-        }
-        Ok(Item::EffectDecl(EffectDecl { name, params, body }))
-    }
+    //     self.expect(TokenKind::LeftBrace, "'{'")?;
+    //     let mut body = Vec::new();
+    //     while !self.check(&TokenKind::RightBrace) {
+    //         body.push(self.parse_statement("effect")?);
+    //     }
+    //     Ok(Item::EffectDecl(EffectDecl { name, params, body }))
+    // }
 
     // NEW: Parse Kernel block -> kernel blur = [[1, 2, 1], [2, 4, 2], [1, 2, 1]];
     fn parse_kernel_decl(&mut self) -> PResult<Item> {
@@ -393,6 +426,11 @@ impl<'a> Parser<'a> {
 
         Ok(Item::KernelDecl { name, matrix })
     }
+    
+        
+
+
+    
 
     fn parse_channel_assign(&mut self, caller: &str) -> PResult<ChannelAssign> {
         let tok = self.peek().clone();
@@ -445,6 +483,49 @@ impl<'a> Parser<'a> {
         let value = self.parse_expr()?;
         self.expect(TokenKind::SemiColon, "';'")?;
         Ok(Item::Assign { name, value })
+    }
+    pub fn parse_statement(&mut self, caller: &str) -> PResult<Statement> {
+        match self.peek_kind() {
+            TokenKind::Let => {
+                self.advance();
+                let name = self.expect_identifier("Variable name expected")?;
+                self.expect(TokenKind::Equal, "=")?;
+                let value = self.parse_expr()?;
+                self.expect(TokenKind::SemiColon, ";")?;
+                Ok(Statement::Let { name, value })
+            }
+            TokenKind::If => self.parse_statement_if_else(caller),
+            _ => {
+                let assign = self.parse_channel_assign(caller)?;
+                Ok(Statement::Channel(assign))
+            }
+        }
+    }
+    fn parse_statement_if_else(&mut self, caller: &str) -> PResult<Statement> {
+        self.advance(); // consume 'if' or 'elif'
+        let cond = Box::new(self.parse_expr()?);
+        
+        self.expect(TokenKind::LeftBrace, "{")?;
+        let mut true_branch = Vec::new();
+        while !self.check(&TokenKind::RightBrace) {
+            true_branch.push(self.parse_statement(caller)?);
+        }
+        self.expect(TokenKind::RightBrace, "}")?;
+
+        let mut false_branch = Vec::new();
+        if self.check(&TokenKind::Else) {
+            self.advance(); // consume else
+            self.expect(TokenKind::LeftBrace, "{")?;
+            while !self.check(&TokenKind::RightBrace) {
+                false_branch.push(self.parse_statement(caller)?);
+            }
+            self.expect(TokenKind::RightBrace, "}")?;
+        } else if self.check(&TokenKind::Elif) {
+            // MAGIC: Recursively parse elif as the false_branch!
+            false_branch.push(self.parse_statement_if_else(caller)?);
+        }
+
+        Ok(Statement::IfElse { cond, true_branch, false_branch })
     }
 
     pub fn parse_expr(&mut self) -> PResult<Expr> {
@@ -754,6 +835,7 @@ pub enum ParseOrLexError {
     Lex(crate::lexer::LexError),
     Parse(ParseError),
 }
+
 
 impl std::fmt::Display for ParseOrLexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

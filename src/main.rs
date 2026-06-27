@@ -2,7 +2,7 @@ use drive::engine::Engine;
 use drive::parser;
 use std::time::Instant;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let source = std::fs::read_to_string("input.drive").expect("Failed to read file");
+    let source = std::fs::read_to_string("input2.drive").expect("Failed to read file");
 
     let program = parser::parse(&source).expect("Parsing Failed!");
 

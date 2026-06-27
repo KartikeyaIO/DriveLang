@@ -14,14 +14,34 @@ pub enum Operation {
         kernel: Kernel,
         mask: Option<Mask>,
     },
+
+    
+    NativeResize {
+        width: u32,
+        height: u32,
+    },
+    
+    NativeCrop {
+        x: u32,
+        y: u32,
+        width: u32,
+        height: u32,
+    },
+    Blend{
+        x:u32,
+        y:u32,
+        frame2: Frame,
+        alpha: f64,
+    }
 }
 
-// ── Unified Pipeline ─────────────────────────────────────────────────────────
+
 
 #[derive(Debug)]
 pub enum PipelineError {
     InvalidData,
     PixelError,
+    NotFeasible,
 }
 
 pub trait Pipeline {
@@ -35,8 +55,8 @@ pub struct EffectPipeline {
 
 impl Pipeline for EffectPipeline {
     fn execute(&self, frame: &mut Frame) -> Result<(), PipelineError> {
-        let width = frame.width();
-        let height = frame.height();
+        // NOTE: We DO NOT declare width and height out here anymore!
+        // The frame size might change mid-pipeline, so we must ask for it on every pass!
 
         for operation in &self.operations {
             match operation {
@@ -46,6 +66,8 @@ impl Pipeline for EffectPipeline {
                     mask,
                 } => {
                     let mut vm = FilterVM::new();
+                    let width = frame.width();
+                    let height = frame.height();
 
                     for y in 0..height {
                         for x in 0..width {
@@ -69,6 +91,8 @@ impl Pipeline for EffectPipeline {
                 }
 
                 Operation::Convolution { kernel, mask } => {
+                    let width = frame.width();
+                    let height = frame.height();
                     // Snapshot BEFORE this kernel pass
                     let snapshot = frame.clone();
 
@@ -89,6 +113,23 @@ impl Pipeline for EffectPipeline {
                                 .map_err(|_| PipelineError::PixelError)?;
                         }
                     }
+                }
+                Operation::Blend {x,y, frame2, alpha } =>{
+                    frame.blend_on(&Pos(*x, *y),frame2, *alpha).map_err(|_| PipelineError::NotFeasible)?;
+                    
+                }
+
+                Operation::NativeResize { width, height } => {
+                    
+                    let new_frame = frame.resize(*width, *height).map_err(|_| PipelineError::NotFeasible)?;
+                    
+                    
+                    *frame = new_frame; 
+                }
+
+                Operation::NativeCrop { x, y, width, height } => {
+                    let new_frame = frame.crop(*x, *y, *width, *height).map_err(|_| PipelineError::NotFeasible)?;
+                    *frame = new_frame;
                 }
             }
         }

@@ -4,11 +4,7 @@ use crate::media::track::{AudioFrame, Track};
 use crate::media::video::TimeStamp;
 use crate::media::video::VideoFrame;
 
-use ffmpeg::software::scaling::{context::Context, flag::Flags};
-use ffmpeg::util::format::pixel::Pixel;
-use ffmpeg_next as ffmpeg;
 
-use ffmpeg_next::format::context::Input as FfmpegInput;
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::GenericImageView;
 use image::codecs::png::PngEncoder;
