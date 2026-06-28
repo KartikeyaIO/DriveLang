@@ -1,0 +1,71 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary: drive
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: drive.exe
+
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary: drive
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare Package (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir DriveLang
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} DriveLang/
+          cp GUIDE.md DriveLang/
+          cp LICENSE DriveLang/
+          cp -r examples DriveLang/
+          cp -r stdlib DriveLang/
+          tar -czf DriveLang-${{ github.ref_name }}-${{ runner.os }}.tar.gz DriveLang
+
+      - name: Prepare Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mkdir DriveLang
+          Copy-Item target/${{ matrix.target }}/release/${{ matrix.binary }} DriveLang/
+          Copy-Item GUIDE.md DriveLang/
+          Copy-Item LICENSE DriveLang/
+          Copy-Item examples DriveLang -Recurse
+          Copy-Item stdlib DriveLang -Recurse
+          Compress-Archive -Path DriveLang -DestinationPath DriveLang-${{ github.ref_name }}-Windows.zip
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.zip
+            *.tar.gz
