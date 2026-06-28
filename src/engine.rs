@@ -590,11 +590,11 @@ impl Engine {
                     }
 
                     Import::Std(path) => {
-                        let mut std_path = String::from("stdlib/");
+                        let exe = std::env::current_exe().unwrap();
+                        let mut std_path = exe.parent().unwrap().to_string_lossy().to_string();
 
-                        std_path
-                            .push_str(&path.iter().skip(1).cloned().collect::<Vec<_>>().join("/"));
-
+                        std_path.push_str("/stdlib/");
+                        std_path.push_str(&path.iter().skip(1).cloned().collect::<Vec<_>>().join("/"));
                         std_path.push_str(".drive");
 
                         self.import_file(&std_path)?;
