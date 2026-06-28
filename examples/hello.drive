@@ -1,0 +1,5 @@
+// 01_hello_world.drive
+// The simplest Drive script: load an image and export it unchanged.
+
+img = frame("input.png");
+export(img, "output.png");

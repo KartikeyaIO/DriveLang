@@ -99,7 +99,7 @@ filter noir() {
 // >1.0 = more saturated
 filter saturation(amount) {
 
-    gray = (r + g + b) / 3;
+    let gray = (r + g + b) / 3;
 
     r = lerp(gray, r, amount);
     g = lerp(gray, g, amount);
@@ -182,7 +182,7 @@ filter cross_process() {
 // amount recommended = 0.0 - 2.0 
 filter bleach_bypass(amount) {
 
-    gray = (r + g + b) / 3;
+    let gray = (r + g + b) / 3;
 
     r = lerp(r, gray, amount * 0.4);
     g = lerp(g, gray, amount * 0.4);
@@ -197,11 +197,11 @@ filter bleach_bypass(amount) {
 // amount recommended = 0.0 - 2.0
 filter vibrance(amount) {
 
-    avg = (r + g + b) / 3;
+    let avg = (r + g + b) / 3;
 
-    dr = abs(r - avg);
-    dg = abs(g - avg);
-    db = abs(b - avg);
+    let  dr = abs(r - avg);
+    let dg = abs(g - avg);
+    let db = abs(b - avg);
 
     r = lerp(r, r + dr, amount);
     g = lerp(g, g + dg, amount);

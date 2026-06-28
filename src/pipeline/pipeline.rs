@@ -32,7 +32,8 @@ pub enum Operation {
         y:u32,
         frame2: Frame,
         alpha: f64,
-    }
+    },
+    
 }
 
 
@@ -63,6 +64,7 @@ pub enum AudioOperation {
         params: Vec<f32>,
     },
     Gain(f32),
+   
 }
 
 impl AudioPipeline {
@@ -92,6 +94,7 @@ impl AudioPipeline {
                         }
                     }
                 }
+            
                 AudioOperation::Gain(db) => track.gain(*db),
             }
         }
@@ -176,7 +179,8 @@ impl Pipeline for EffectPipeline {
                 Operation::NativeCrop { x, y, width, height } => {
                     let new_frame = frame.crop(*x, *y, *width, *height).map_err(|_| PipelineError::NotFeasible)?;
                     *frame = new_frame;
-                }
+                } 
+                
             }
         }
 

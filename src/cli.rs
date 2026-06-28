@@ -52,7 +52,7 @@ pub fn run_cli() -> Result<(), Box<dyn std::error::Error>> {
             let file_path = file.clone().unwrap_or_else(|| "main.drive".to_string());
             
             if !Path::new(&file_path).exists() {
-                return Err(format!("File '{}' not found. Did you forget where you parked your project?", file_path).into());
+                return Err(format!("File '{}' not found. Please check your path?", file_path).into());
             }
 
             let source = fs::read_to_string(&file_path)?;
@@ -79,44 +79,14 @@ fn create_project(name: &str) -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir_all(base_path.join("assets"))?;
     fs::create_dir_all(base_path.join("output"))?;
 
-    
-    let dummy_width = 400;
-    let dummy_height = 100;
-    let len = dummy_width * dummy_height;
-    
-    let pixel_data = PixelData::RGBA(
-        vec![255; len], 
-        vec![200; len], 
-        vec![200; len], // B
-        vec![255; len], // A
-    );
-    
-    if let Ok(frame) = Frame::new(dummy_width as u32, dummy_height as u32, pixel_data) {
-        let asset_path = base_path.join("assets/drivelang.png");
-        let _ = encode_image(&frame, asset_path.to_str().unwrap());
-    }
-
     // The beautiful boilerplate
     let boilerplate = r#"
-canvas = blank(800, 600);
-
-
-filter stylish() {
-    r = (x / width) * 25.0;
-    g = (y / height) * 25.0;
-    b = 150.0;
-    a = 255.0;
-}
-
-
-background = canvas -> stylish();
-drivelang = frame("assets/drivelang.png");
-final_img = background -> blend(200, 250, drivelang, 0.9);
-export(final_img, "output/result.png");
-print("Successfully rendered to output/result.png ");
+import "filters.drive" ;
+print("Hello world!");
 "#;
 
     fs::write(base_path.join("main.drive"), boilerplate)?;
+    fs::File::create_new(base_path.join("filters.drive"))?;
     
     Ok(())
 }

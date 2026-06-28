@@ -20,4 +20,7 @@ af tremolo(freq, depth) {
 
 audio = audio -> tremolo(5,0.8);
 
+track1 = silence(5.0, 48000, 2);
+
+export(track1, "five_seconds.wav");
 export(audio, "Outputs/output.wav");

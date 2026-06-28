@@ -1,0 +1,40 @@
+// 09_conditionals.drive
+// Use if/else inside filter bodies and at script level.
+
+filter threshold(level) {
+    let luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    if luma > level {
+        r = 255;
+        g = 255;
+        b = 255;
+    } else {
+        r = 0;
+        g = 0;
+        b = 0;
+    }
+}
+
+filter channel_swap(mode) {
+    // mode 0: normal  mode 1: swap r and b
+    if mode == 1 {
+        let tmp = r;
+        r = b;
+        b = tmp;
+    } else {
+        r = r;
+        g = g;
+        b = b;
+    }
+}
+
+img = frame("input.png");
+
+quality = 1;
+
+if quality == 1 {
+    result = img -> blur(3) -> threshold(128);
+} else {
+    result = img -> threshold(128);
+}
+
+export(result, "thresholded.png");

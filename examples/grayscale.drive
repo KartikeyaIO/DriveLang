@@ -1,0 +1,21 @@
+// grayscale_contrast.drive
+// Convert to grayscale using luminance weights, then boost contrast.
+
+filter grayscale() {
+    let luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    r = luma;
+    g = luma;
+    b = luma;
+}
+
+filter contrast(factor) {
+    r = clamp(128 + factor * (r - 128), 0, 255);
+    g = clamp(128 + factor * (g - 128), 0, 255);
+    b = clamp(128 + factor * (b - 128), 0, 255);
+}
+
+img = frame("portrait.png");
+
+result = img -> grayscale() -> contrast(1.8);
+
+export(result, "bw_high_contrast.png");

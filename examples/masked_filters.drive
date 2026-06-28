@@ -1,0 +1,31 @@
+// 05_masked_filter.drive
+// Apply a filter only within a rectangular pixel region using a mask.
+// Syntax: filter_name(args)[x_range, y_range]
+
+filter redtint() {
+    r = clamp(r + 80, 0, 255);
+    g = clamp(g - 30, 0, 255);
+    b = clamp(b - 30, 0, 255);
+}
+
+filter vignette(strength) {
+    let cx = width / 2;
+    let cy = height / 2;
+    let dx = (x - cx) / cx;
+    let dy = (y - cy) / cy;
+    let dist = sqrt(dx * dx + dy * dy);
+    let factor = clamp(1 - strength * dist, 0, 1);
+    r = r * factor;
+    g = g * factor;
+    b = b * factor;
+}
+
+img = frame("scene.png");
+
+// Only tint pixels in x: 100..400, y: 50..300
+tinted = img -> redtint()[100..400, 50..300];
+
+// Vignette covers the whole frame
+result = tinted -> vignette(0.7);
+
+export(result, "masked_output.png");

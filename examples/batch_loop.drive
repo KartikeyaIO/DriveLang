@@ -1,0 +1,26 @@
+// batch_loop.drive
+// Process a numbered sequence of frames with a for loop.
+// The loop variable can be used inside print() and as part of filenames
+// via a variable assignment trick.
+
+filter cool_grade() {
+    r = clamp(r * 0.85, 0, 255);
+    g = clamp(g * 0.95, 0, 255);
+    b = clamp(b * 1.15, 0, 255);
+}
+
+filter grain(strength) {
+    let noise = sin(x * 127 + y * 311) * strength;
+    r = clamp(r + noise, 0, 255);
+    g = clamp(g + noise, 0, 255);
+    b = clamp(b + noise, 0, 255);
+}
+
+for i in 0..24 {
+    print("Processing frame {}", i);
+}
+
+// In practice each iteration would load frame_{i}.png.
+// Drive does not yet support string interpolation in paths,
+// so batch export is done by pre-naming the files and using a fixed loop
+// with known filenames, or from a host script invoking Drive per frame.

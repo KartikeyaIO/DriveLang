@@ -1,0 +1,24 @@
+// 08_audio.drive
+// Load an audio track, apply a custom audio filter, adjust gain, export as WAV.
+
+af lowpass(cutoff) {
+    // Simple one-pole low-pass approximation using lerp.
+    // cutoff is a blend factor between 0 (silence) and 1 (dry signal).
+    l = lerp(0, l, cutoff);
+    r = lerp(0, r, cutoff);
+}
+
+af boost_bass(amount) {
+    // Amplify low-frequency content by adding a phase-shifted copy.
+    // This is illustrative; a real implementation would use a proper filter.
+    let bass = sin(time * 80) * amount;
+    l = clamp(l + bass, -1, 1);
+    r = clamp(r + bass, -1, 1);
+}
+
+music = track("song.mp3");
+
+// Apply low-pass then a gentle bass boost
+processed = music -> lowpass(0.6) -> boost_bass(0.05);
+
+export(processed, "processed.wav");

@@ -60,6 +60,7 @@ pub enum TokenKind {
     GreaterThan,
 
     Blank,
+    Silence,
     Kernel,
     EOF,
 }
@@ -129,6 +130,7 @@ fn identify_token(s: &str) -> TokenKind {
         "else" => TokenKind::Else,
         "elif" => TokenKind::Elif,
         "blank" => TokenKind::Blank,
+        "silence" => TokenKind::Silence,
         "and" => TokenKind::And,
         "or" => TokenKind::Or,
         "not" => TokenKind::Not,

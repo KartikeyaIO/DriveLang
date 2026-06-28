@@ -31,10 +31,10 @@ filter invert() {
 
 // Converts the Image to grayscale
 filter grayscale() {
-    let factor = (r + g + b) / 3
+    let factor = (r + g + b) / 3;
     r = factor;
     g = factor;
-    b = factor / 3;
+    b = factor;
 }
 
 

@@ -3,6 +3,7 @@ use std::path::Path;
 use fontdue::{Font, FontSettings};
 
 use crate::media::track::Track;
+use crate::media::video::TimeStamp;
 use crate::text::Text;
 use crate::filter::{Filter,AudioFilter,Effect, Instruction};
 use crate::io::io::{self, IOError};
@@ -934,6 +935,21 @@ impl Engine {
 
                 Ok(Value::Frame(Frame::blank(width, height)))
             }
+            "silence" => {
+                if args.len() != 3 {
+                    return Err(EngineError::Eval(
+                        "silence() requires Duration, sample rate  and channel ".into(),
+                    ));
+                }
+
+                let dur = self.eval_number(&args[0])? ;
+                let duration = TimeStamp::from_seconds(dur, 1, 44100);
+                let sample_rate = self.eval_number(&args[1])? as u32;
+                let channel = self.eval_number(&args[2])? as u16;
+
+
+                Ok(Value::Track(Track::silence(duration, sample_rate,channel)))
+            }
 
             other => Err(EngineError::UndefinedOp(format!(
                 "unknown function '{other}'"
@@ -1008,6 +1024,7 @@ impl Engine {
                 }
             }
         }
+        
 
         let filter = self
             .afilters
@@ -1051,7 +1068,7 @@ impl Engine {
         }
         if name.as_str() == "blend" {
             if stage.args.len() != 4 {
-                return Err(EngineError::Compile("crop requires exactly 4 arguments: (x, y, width, height)".into()));
+                return Err(EngineError::Compile("blend requires exactly 4 arguments: (x, y, frame, alpha)".into()));
             }
             let x = self.eval_number(&stage.args[0])?.max(0.0) as u32;
             let y = self.eval_number(&stage.args[1])?.max(0.0) as u32;
@@ -1059,6 +1076,7 @@ impl Engine {
             let alpha = self.eval_number(&stage.args[3])?.max(0.0) ;
             return Ok(Operation::Blend { x, y, frame2: frame, alpha });
         }
+        
 
         let mask = match &stage.mask {
             Some((x_range, y_range)) => Some(self.build_mask(x_range, y_range)?),

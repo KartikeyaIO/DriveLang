@@ -1,0 +1,55 @@
+// 10_full_pipeline.drive
+// A complete example combining imports, custom filters, kernels,
+// audio processing, compositing, and export.
+
+import "filters/my_filters.drive";
+
+kernel emboss = [
+    [-2, -1,  0],
+    [-1,  1,  1],
+    [ 0,  1,  2]
+];
+
+filter hue_rotate(angle) {
+    let cosA = cos(angle);
+    let sinA = sin(angle);
+    let nr = r * (0.213 + cosA * 0.787 - sinA * 0.213)
+           + g * (0.715 - cosA * 0.715 - sinA * 0.715)
+           + b * (0.072 - cosA * 0.072 + sinA * 0.928);
+    let ng = r * (0.213 - cosA * 0.213 + sinA * 0.143)
+           + g * (0.715 + cosA * 0.285 + sinA * 0.140)
+           + b * (0.072 - cosA * 0.072 - sinA * 0.283);
+    let nb = r * (0.213 - cosA * 0.213 - sinA * 0.787)
+           + g * (0.715 - cosA * 0.715 + sinA * 0.715)
+           + b * (0.072 + cosA * 0.928 + sinA * 0.072);
+    r = clamp(nr, 0, 255);
+    g = clamp(ng, 0, 255);
+    b = clamp(nb, 0, 255);
+}
+
+af normalize_audio() {
+    let peak = max(abs(l), abs(r));
+    l = l / peak;
+    r = r / peak;
+}
+
+// --- Image pipeline ---
+base   = frame("hero.png");
+badge  = frame("badge.png") -> resize(80, 80);
+label  = text("Editron v1", "fonts/Mono.ttf", 24, 200, 200, 200);
+
+result = base
+    -> hue_rotate(0.5)
+    -> blur(2)
+    -> emboss()[0..640, 0..100]
+    -> blend(16, 16, badge, 0.9)
+    -> blend(16, 110, label, 1.0)
+    -> crop(0, 0, 1280, 720);
+
+export(result, "final.png");
+
+// --- Audio pipeline ---
+sfx = track("ambient.flac") -> normalize_audio();
+export(sfx, "ambient_normalized.wav");
+
+print("Done.");

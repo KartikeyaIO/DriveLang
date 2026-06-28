@@ -1,0 +1,344 @@
+import std::core;
+import std::color;
+import std::advanced;
+import std::kernels;
+
+filter bg_slate() {
+    r = 18;
+    g = 20;
+    b = 26;
+    a = 255;
+}
+
+filter bg_terminal() {
+    r = 10;
+    g = 24;
+    b = 16;
+    a = 255;
+}
+
+filter ui_border(thickness) {
+    let on_edge = (x < thickness) or (x > (width - thickness)) or (y < thickness) or (y > (height - thickness));
+    r = (on_edge * 40)  + ((not on_edge) * r);
+    g = (on_edge * 220) + ((not on_edge) * g);
+    b = (on_edge * 255) + ((not on_edge) * b);
+}
+
+filter frame_darken_edges() {
+    let cx = width / 2;
+    let cy = height / 2;
+    let dist = sqrt(((x - cx) * (x - cx)) + ((y - cy) * (y - cy)));
+    let max_d = sqrt((cx * cx) + (cy * cy));
+    let falloff = clamp(1.0 - ((dist / max_d) * 0.75), 0.0, 1.0);
+    r = r * falloff;
+    g = g * falloff;
+    b = b * falloff;
+}
+
+filter vaporwave_horizon(strength) {
+    let cx = width / 2;
+    let cy = height / 2;
+    let dist = sqrt(((x - cx) * (x - cx)) + ((y - cy) * (y - cy)));
+    let max_d = sqrt((cx * cx) + (cy * cy));
+    let nd = dist / max_d;
+    let nr = 255 * (1.0 - nd);
+    let ng = 20 * nd;
+    let nb = 180 * (0.5 + nd * 0.5);
+    r = clamp((r * (1.0 - strength)) + (nr * strength), 0, 255);
+    g = clamp((g * (1.0 - strength)) + (ng * strength), 0, 255);
+    b = clamp((b * (1.0 - strength)) + (nb * strength), 0, 255);
+}
+
+print("Rendering DriveLang Carousel...");
+
+slide1 = blank(1080, 1080)
+    -> bg_slate()
+    -> grid(60, 30, 34, 46)
+    -> vignette(1.0)
+    -> ui_border(8);
+
+txt1_a = text("DRIVELANG", "test_inputs/georgia.ttf", 110, 255, 80, 120);
+txt1_b = text("A pipeline DSL", "test_inputs/georgia.ttf", 52, 160, 170, 190);
+txt1_c = text("for media editing.", "test_inputs/georgia.ttf", 52, 160, 170, 190);
+
+slide1 = slide1
+    -> blend(80, 380, txt1_a, 1.0)
+    -> blend(80, 520, txt1_b, 1.0)
+    -> blend(80, 590, txt1_c, 1.0);
+
+export(slide1, "Outputs/slide_01.png");
+print("Slide 1/15");
+
+slide2 = blank(1080, 1080)
+    -> bg_slate()
+    -> grid(40, 28, 30, 42)
+    -> frame_darken_edges()
+    -> ui_border(6);
+
+txt2_a = text("What is it?", "test_inputs/georgia.ttf", 72, 100, 220, 200);
+txt2_b = text("Load. Filter. Pipe. Export.", "test_inputs/georgia.ttf", 48, 180, 185, 200);
+txt2_c = text("That is the whole model.", "test_inputs/georgia.ttf", 44, 130, 140, 160);
+
+slide2 = slide2
+    -> blend(80, 380, txt2_a, 1.0)
+    -> blend(80, 480, txt2_b, 1.0)
+    -> blend(80, 545, txt2_c, 1.0);
+
+export(slide2, "Outputs/slide_02.png");
+print("Slide 2/15");
+
+slide3 = blank(1080, 1080)
+    -> bg_slate()
+    -> noir()
+    -> scanlines(0.35)
+    -> ui_border(8);
+
+txt3_a = text("No GUI. No bloat.", "test_inputs/georgia.ttf", 72, 220, 220, 220);
+txt3_b = text("Write the pipeline.", "test_inputs/georgia.ttf", 56, 200, 200, 200);
+txt3_c = text("Run it. Done.", "test_inputs/georgia.ttf", 56, 160, 160, 160);
+
+slide3 = slide3
+    -> blend(80, 390, txt3_a, 1.0)
+    -> blend(80, 480, txt3_b, 1.0)
+    -> blend(80, 550, txt3_c, 1.0);
+
+export(slide3, "Outputs/slide_03.png");
+print("Slide 3/15");
+
+slide4 = blank(1080, 1080)
+    -> bg_slate()
+    -> grid(40, 30, 32, 40)
+    -> frame_darken_edges();
+
+txt4_a = text("img = frame('photo.png');", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+txt4_b = text("result = img", "test_inputs/georgia.ttf", 44, 180, 185, 200);
+txt4_c = text("    -> grayscale()", "test_inputs/georgia.ttf", 44, 255, 180, 80);
+txt4_d = text("    -> contrast(1.6);", "test_inputs/georgia.ttf", 44, 255, 180, 80);
+txt4_e = text("export(result, 'out.png');", "test_inputs/georgia.ttf", 44, 180, 120, 255);
+
+slide4 = slide4
+    -> blend(80, 320, txt4_a, 1.0)
+    -> blend(80, 400, txt4_b, 1.0)
+    -> blend(80, 460, txt4_c, 1.0)
+    -> blend(80, 520, txt4_d, 1.0)
+    -> blend(80, 600, txt4_e, 1.0);
+
+export(slide4, "Outputs/slide_04.png");
+print("Slide 4/15");
+
+slide5 = blank(1080, 1080)
+    -> bg_slate()
+    -> hdr(0.9)
+    -> vignette(0.9)
+    -> ui_border(10);
+
+txt5_a = text("Write your own filter.", "test_inputs/georgia.ttf", 64, 255, 230, 200);
+txt5_b = text("filter redshift() {", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+txt5_c = text("    r = r * 1.4;", "test_inputs/georgia.ttf", 44, 180, 185, 200);
+txt5_d = text("}", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+
+slide5 = slide5
+    -> blend(80, 340, txt5_a, 1.0)
+    -> blend(80, 450, txt5_b, 1.0)
+    -> blend(80, 510, txt5_c, 1.0)
+    -> blend(80, 570, txt5_d, 1.0);
+
+export(slide5, "Outputs/slide_05.png");
+print("Slide 5/15");
+
+slide6 = blank(1080, 1080)
+    -> bg_slate()
+    -> grid(60, 30, 34, 46)
+    -> cyberpunk_glitch(120, 0.7)
+    -> frame_darken_edges();
+
+txt6_a = text("Spatial Masks.", "test_inputs/georgia.ttf", 80, 220, 80, 255);
+txt6_b = text("Apply filters to regions,", "test_inputs/georgia.ttf", 46, 180, 185, 200);
+txt6_c = text("not the whole frame.", "test_inputs/georgia.ttf", 46, 180, 185, 200);
+txt6_d = text("-> blur(9)[0..540, 0..1080]", "test_inputs/georgia.ttf", 40, 100, 220, 150);
+
+slide6 = slide6
+    -> blend(80, 340, txt6_a, 1.0)
+    -> blend(80, 450, txt6_b, 1.0)
+    -> blend(80, 510, txt6_c, 1.0)
+    -> blend(80, 600, txt6_d, 1.0);
+
+export(slide6, "Outputs/slide_06.png");
+print("Slide 6/15");
+
+slide7 = blank(1080, 1080)
+    -> bg_slate()
+    -> grid(120, 55, 62, 80)
+    -> sharpen()
+    -> ui_border(12);
+
+txt7_a = text("Convolution Kernels.", "test_inputs/georgia.ttf", 68, 120, 220, 255);
+txt7_b = text("kernel edge = [", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+txt7_c = text("    [-1,-1,-1],", "test_inputs/georgia.ttf", 40, 180, 185, 200);
+txt7_d = text("    [-1, 8,-1],", "test_inputs/georgia.ttf", 40, 180, 185, 200);
+txt7_e = text("    [-1,-1,-1]];", "test_inputs/georgia.ttf", 40, 180, 185, 200);
+
+slide7 = slide7
+    -> blend(80, 330, txt7_a, 1.0)
+    -> blend(80, 430, txt7_b, 1.0)
+    -> blend(80, 490, txt7_c, 1.0)
+    -> blend(80, 545, txt7_d, 1.0)
+    -> blend(80, 600, txt7_e, 1.0);
+
+export(slide7, "Outputs/slide_07.png");
+print("Slide 7/15");
+
+slide8 = blank(1080, 1080)
+    -> bg_slate()
+    -> split_tone(140.0)
+    -> scanlines(0.2)
+    -> ui_border(8);
+
+txt8_a = text("Math built in.", "test_inputs/georgia.ttf", 80, 255, 210, 150);
+txt8_b = text("sin, cos, sqrt, pow,", "test_inputs/georgia.ttf", 48, 200, 185, 160);
+txt8_c = text("clamp, lerp, smooth_lerp.", "test_inputs/georgia.ttf", 48, 200, 185, 160);
+txt8_d = text("Use them inside filters freely.", "test_inputs/georgia.ttf", 38, 130, 140, 160);
+
+slide8 = slide8
+    -> blend(80, 340, txt8_a, 1.0)
+    -> blend(80, 450, txt8_b, 1.0)
+    -> blend(80, 515, txt8_c, 1.0)
+    -> blend(80, 610, txt8_d, 1.0);
+
+export(slide8, "Outputs/slide_08.png");
+print("Slide 8/15");
+
+slide9 = blank(1080, 1080)
+    -> bg_terminal()
+    -> scanlines(0.45)
+    -> frame_darken_edges()
+    -> ui_border(6);
+
+txt9_a = text("Audio too.", "test_inputs/georgia.ttf", 90, 80, 255, 160);
+txt9_b = text("af lowpass(cutoff) {", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+txt9_c = text("    l = lerp(0, l, cutoff);", "test_inputs/georgia.ttf", 40, 180, 185, 200);
+txt9_d = text("    r = lerp(0, r, cutoff);", "test_inputs/georgia.ttf", 40, 180, 185, 200);
+txt9_e = text("}", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+
+slide9 = slide9
+    -> blend(80, 320, txt9_a, 1.0)
+    -> blend(80, 440, txt9_b, 1.0)
+    -> blend(80, 500, txt9_c, 1.0)
+    -> blend(80, 555, txt9_d, 1.0)
+    -> blend(80, 615, txt9_e, 1.0);
+
+export(slide9, "Outputs/slide_09.png");
+print("Slide 9/15");
+
+slide10 = blank(1080, 1080)
+    -> bg_slate()
+    -> vintage()
+    -> vignette(0.85)
+    -> ui_border(20);
+
+txt10_a = text("Compositing.", "test_inputs/georgia.ttf", 80, 255, 180, 180);
+txt10_b = text("Blend frames. Overlay text.", "test_inputs/georgia.ttf", 46, 220, 200, 200);
+txt10_c = text("Resize. Crop. Ship.", "test_inputs/georgia.ttf", 46, 180, 170, 170);
+
+slide10 = slide10
+    -> blend(80, 390, txt10_a, 1.0)
+    -> blend(80, 495, txt10_b, 1.0)
+    -> blend(80, 560, txt10_c, 1.0);
+
+export(slide10, "Outputs/slide_10.png");
+print("Slide 10/15");
+
+slide11 = blank(1080, 1080)
+    -> bg_slate()
+    -> cyanotype()
+    -> grid(80, 40, 60, 80)
+    -> ui_border(14);
+
+txt11_a = text("Import. Reuse. Share.", "test_inputs/georgia.ttf", 68, 140, 220, 255);
+txt11_b = text("import 'my_filters.drive';", "test_inputs/georgia.ttf", 46, 100, 220, 150);
+txt11_c = text("Build a personal stdlib.", "test_inputs/georgia.ttf", 44, 160, 170, 190);
+
+slide11 = slide11
+    -> blend(80, 390, txt11_a, 1.0)
+    -> blend(80, 490, txt11_b, 1.0)
+    -> blend(80, 560, txt11_c, 1.0);
+
+export(slide11, "Outputs/slide_11.png");
+print("Slide 11/15");
+
+slide12 = blank(1080, 1080)
+    -> bg_slate()
+    -> teal_orange(0.7)
+    -> frame_darken_edges()
+    -> ui_border(8);
+
+txt12_a = text("Loops and conditionals.", "test_inputs/georgia.ttf", 64, 80, 200, 255);
+txt12_b = text("for i in 0..24 {", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+txt12_c = text("    print('frame {}', i);", "test_inputs/georgia.ttf", 40, 180, 185, 200);
+txt12_d = text("}", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+
+slide12 = slide12
+    -> blend(80, 360, txt12_a, 1.0)
+    -> blend(80, 460, txt12_b, 1.0)
+    -> blend(80, 520, txt12_c, 1.0)
+    -> blend(80, 580, txt12_d, 1.0);
+
+export(slide12, "Outputs/slide_12.png");
+print("Slide 12/15");
+
+slide13 = blank(1080, 1080)
+    -> bg_slate()
+    -> vaporwave_horizon(0.7)
+    -> vignette(0.8);
+
+txt13_a = text("Stdlib included.", "test_inputs/georgia.ttf", 72, 220, 180, 255);
+txt13_b = text("30+ filters. 20+ kernels.", "test_inputs/georgia.ttf", 48, 180, 185, 200);
+txt13_c = text("Audio filters. Out of the box.", "test_inputs/georgia.ttf", 44, 160, 165, 185);
+
+slide13 = slide13
+    -> blend(80, 380, txt13_a, 1.0)
+    -> blend(80, 478, txt13_b, 1.0)
+    -> blend(80, 545, txt13_c, 1.0);
+
+export(slide13, "Outputs/slide_13.png");
+print("Slide 13/15");
+
+slide14 = blank(1080, 1080)
+    -> bg_slate()
+    -> hdr(0.8)
+    -> ui_border(16)
+    -> frame_darken_edges();
+
+txt14_a = text("Open source.", "test_inputs/georgia.ttf", 80, 255, 230, 200);
+txt14_b = text("Built in Rust. No runtime.", "test_inputs/georgia.ttf", 48, 200, 190, 175);
+txt14_c = text("github.com/KartikeyaIO/DriveLang", "test_inputs/georgia.ttf", 42, 130, 140, 160);
+
+slide14 = slide14
+    -> blend(80, 380, txt14_a, 1.0)
+    -> blend(80, 485, txt14_b, 1.0)
+    -> blend(80, 580, txt14_c, 1.0);
+
+export(slide14, "Outputs/slide_14.png");
+print("Slide 14/15");
+
+slide15 = blank(1080, 1080)
+    -> bg_slate()
+    -> vaporwave_horizon(0.85)
+    -> scanlines(0.15)
+    -> ui_border(24);
+
+txt15_a = text("Oh, and one more thing.", "test_inputs/georgia.ttf", 58, 220, 220, 220);
+txt15_b = text("This entire deck?", "test_inputs/georgia.ttf", 68, 255, 80, 120);
+txt15_c = text("Generated by DriveLang.", "test_inputs/georgia.ttf", 68, 255, 80, 120);
+txt15_d = text("Told you it works.", "test_inputs/georgia.ttf", 44, 160, 170, 190);
+
+slide15 = slide15
+    -> blend(80, 330, txt15_a, 1.0)
+    -> blend(80, 420, txt15_b, 1.0)
+    -> blend(80, 500, txt15_c, 1.0)
+    -> blend(80, 620, txt15_d, 1.0);
+
+export(slide15, "Outputs/slide_15.png");
+print("Slide 15/15");
+
+print("Done. 15 slides. Zero Photoshop.");

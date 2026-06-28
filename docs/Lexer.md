@@ -1,185 +1,114 @@
-# Lexer
+# Lexer — `lexer.rs`
 
-The lexer is responsible for converting source code into a sequence of tokens.
-
-It is implemented as a deterministic state machine and produces a `Vec<Token>` that is consumed by the parser.
+The lexer is the first stage of the Drive pipeline. It takes raw source code as a `&str` and produces a flat `Vec<Token>`, or a `LexError` on failure. It operates as a single-pass byte scanner with an explicit state machine — no regex, no external dependencies.
 
 ---
 
-## Overview
+## Core Types
 
-The lexer processes input as a byte stream and emits structured tokens representing identifiers, literals, and syntax elements.
-
-Each token contains:
-
-- `kind`: token category (`TokenKind`)
-- `value`: lexeme as a string
-- `line`: line number for error reporting
-
----
-
-## Token Representation
-
-### Token
-```
-struct Token {
-kind: TokenKind,
-value: String,
-line: usize,
+### `Token`
+```rust
+pub struct Token {
+    pub kind: TokenKind,
+    pub value: String,
+    pub line: usize,
 }
 ```
-
-### TokenKind
-
-Supported token categories include:
-
-- Identifiers
-- Keywords:
-  - `load`
-  - `filter`
-  - `export`
-  - `import`
-- Literals:
-  - Integer
-  - Float
-  - String
-- Symbols:
-  - Parentheses `(` `)`
-  - Braces `{` `}`
-  - Brackets `[` `]`
-  - Comma `,`
-  - Semicolon `;`
-  - Dot `.`
-  - Range operator `..`
-  - Assignment `=`
-- End-of-file marker (`EOF`)
+Every token carries its classification (`kind`), raw text (`value`), and the source line it appeared on (`line`) for error reporting.
 
 ---
 
-## Lexer States
+### `TokenKind`
+The full set of tokens the lexer can emit:
 
-The lexer operates using an explicit state machine:
-
-- `Default`  
-  Handles whitespace, symbols, and transitions to other states
-
-- `Identifier`  
-  Parses identifiers and keywords
-
-- `String`  
-  Parses string literals
-
-- `Number`  
-  Parses numeric values (integer and float)
-
-This design ensures controlled transitions and avoids ambiguous token emission.
+| Category | Variants |
+|---|---|
+| Literals | `Int`, `Float`, `String` |
+| Identifiers | `Identifier` |
+| Keywords | `Let`, `Import`, `As`, `For`, `In`, `If`, `Else`, `Elif`, `And`, `Or`, `Not`, `Print` |
+| Media keywords | `LoadFrame` (`frame`), `LoadTrack` (`track`), `Filter`, `Export`, `AudioFilter` (`af`), `Blank`, `Silence`, `Kernel` |
+| Operators | `Plus`, `Minus`, `Star`, `Slash`, `Equal`, `EqualEqual`, `NotEqual`, `LessThan`, `GreaterThan`, `LessEqual`, `GreaterEqual` |
+| Punctuation | `LeftParen`, `RightParen`, `LeftBrace`, `RightBrace`, `LeftBracket`, `RightBracket`, `SemiColon`, `Comma`, `Dot`, `DotDot`, `DoubleColon`, `Arrow` |
+| Sentinel | `EOF` |
 
 ---
 
-## State Behavior
+### `State`
+The internal scanner state. Only one variant is active at any point:
 
-### Default State
-
-- Skips whitespace (` `, `\t`, `\r`)
-- Tracks newlines for accurate line numbers
-- Emits single-character tokens via symbol mapping
-- Transitions to:
-  - `Identifier` when encountering alphabetic characters or `_`
-  - `Number` when encountering digits
-  - `String` when encountering `"`
-
----
-
-### Identifier State
-
-- Consumes alphanumeric characters and `_`
-- Classifies the result as:
-  - Keyword (if reserved)
-  - Identifier (otherwise)
-- Returns to `Default` state without consuming the terminating character
+| State | Meaning |
+|---|---|
+| `Default` | Between tokens; routing on the current character |
+| `Identifier` | Accumulating an alphanumeric/underscore run |
+| `String` | Inside a `"…"` string literal |
+| `Number` | Accumulating digits (and at most one `.`) |
+| `Comment` | Inside a `//` line comment; discards until `\n` |
 
 ---
 
-### String State
+### `LexError`
+Three error variants, all carrying a `line` number and a human-readable `message`:
 
-- Accumulates characters until a closing `"`
-- Supports multiline strings (tracks line numbers)
-- Emits a `String` token on completion
-- Produces an error if the string is not terminated
-
----
-
-### Number State
-
-- Parses integer and floating-point values
-- Detects floats based on presence of `.`
-- Handles negative numbers (`-`) only when followed by digits
-- Differentiates between:
-  - Float literals
-  - Range operator (`..`)
-
-Invalid numeric formats produce an error.
+| Variant | Trigger |
+|---|---|
+| `InvalidCharacter { ch, line, message }` | Unrecognised character, bare `:`, or bare `!` |
+| `UnterminatedString { line, message }` | Source ends while still inside a string |
+| `InvalidNumber { value, line, message }` | Defined but not yet emitted by the current implementation |
 
 ---
 
-## Helper Functions
+## Key Functions
 
-### char_to_token()
+### `lexer(source: &str) -> Result<Vec<Token>, LexError>`
+The main entry point. Iterates over `source` as raw bytes with an index `i` and a shared `buffer: String`.
 
-Maps single-character symbols to their corresponding token types.
+**State transitions:**
 
-### identify_token()
+```
+Default ──"──────────────────────────────► String
+        ──alpha/underscore────────────────► Identifier
+        ──digit──────────────────────────► Number
+        ──'//'───────────────────────────► Comment
+        ──single/multi-char operators────► emit Token immediately
 
-Determines whether a parsed identifier is a keyword or a user-defined identifier.
+String  ──"──────────────────────────────► Default (emit String token)
+        ──\n─────────────────────────────► increment line, stay in String
 
----
+Identifier ──alphanumeric/underscore──────► stay
+           ──anything else───────────────► Default (emit via identify_token)
 
-## Error Handling
+Number  ──digit──────────────────────────► stay
+        ──'.' (first, not followed by '.') ► stay (becomes Float)
+        ──'..'───────────────────────────► emit Int, back to Default
+        ──anything else───────────────────► Default (emit Int or Float)
 
-Errors are represented using `LexError`:
+Comment ──\n─────────────────────────────► Default
+        ──anything else───────────────────► discard, stay
+```
 
-- `InvalidCharacter`
-- `UnterminatedString`
-- `InvalidNumber`
+Multi-character operators are handled inline with a one-character lookahead (`bytes[i+1]`): `..`, `::`, `==`, `!=`, `>=`, `<=`, `->`. A bare `:` or `!` is immediately a `LexError`.
 
-Each error includes:
-
-- Line number
-- Contextual message
-
----
-
-## End of Input
-
-After processing all input, the lexer emits an explicit `EOF` token.
-
----
-
-## Current Capabilities
-
-- Deterministic tokenization via state machine
-- Support for identifiers, keywords, literals, and symbols
-- Line-aware error reporting
-- Basic numeric and string parsing
-- Range operator (`..`) handling
+After the main loop, any in-progress `Identifier` or `Number` is flushed. An in-progress `String` emits `UnterminatedString`. A trailing `EOF` token is always appended.
 
 ---
 
-## Limitations
-
-- No support for comments
-- No escape sequences in strings
-- Limited operator set
-- No unicode handling beyond basic ASCII
+### `identify_token(s: &str) -> TokenKind`
+Maps a completed identifier buffer to a keyword `TokenKind`, or falls back to `Identifier`. All Drive keywords are matched here: `frame`, `track`, `filter`, `export`, `import`, `as`, `kernel`, `for`, `in`, `af`, `if`, `else`, `elif`, `blank`, `silence`, `and`, `or`, `not`, `let`, `print`.
 
 ---
 
-## Summary
+### `char_to_token(c: char) -> Option<TokenKind>`
+Maps single unambiguous characters to their token kind: `(`, `)`, `{`, `}`, `;`, `[`, `]`, `,`, `+`, `*`. Returns `None` for anything else, causing the `Default` branch to emit an `InvalidCharacter` error. Note: `-` and `/` are handled separately in `Default` because they are prefixes of multi-char tokens (`->`, `//`).
 
-The lexer provides:
+---
 
-- A structured token stream for parsing
-- Deterministic behavior via explicit state transitions
-- Basic error handling for malformed input
+## Tests
 
-It serves as the first stage of the Drive DSL pipeline.
+Four unit tests covering edge cases in multi-character token disambiguation:
+
+| Test | Input | Checks |
+|---|---|---|
+| `lex_minus_is_binary_op` | `r - 1` | `-` alone is `Minus`, not confused with `->` |
+| `lex_arrow_and_double_colon` | `a -> b::c` | `->` and `::` are emitted correctly |
+| `lex_range_dotdot` | `0..10` | Integer followed by `..` does not consume the dots into the number |
+| `lex_as_keyword` | `import "f.drive" as filt;` | Full import statement tokenises correctly |

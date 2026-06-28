@@ -343,8 +343,7 @@ impl<'a> Parser<'a> {
         let import = match self.peek_kind() {
             TokenKind::String => {
                 let path = self.advance().value;
-                self.expect(TokenKind::As, "'as'")?;
-                let alias = self.expect_identifier("an alias name")?;
+                let alias = "file".to_string();
                 Import::File { path, alias }
             }
             TokenKind::Identifier => {
@@ -824,6 +823,20 @@ impl<'a> Parser<'a> {
 
                 Ok(Expr::Call {
                     path: vec!["blank".to_string()],
+                    args,
+                })
+            }
+            TokenKind::Silence => {
+                self.advance();
+
+                self.expect(TokenKind::LeftParen, "'(' after 'silence'")?;
+
+                let args = self.parse_arg_list()?;
+
+                self.expect(TokenKind::RightParen, "')'")?;
+
+                Ok(Expr::Call {
+                    path: vec!["silence".to_string()],
                     args,
                 })
             }

@@ -1,0 +1,20 @@
+// basic_filters.drive
+// Declare two simple point filters and apply them in a pipeline.
+
+filter brighten(amount) {
+    r = clamp(r + amount, 0, 255);
+    g = clamp(g + amount, 0, 255);
+    b = clamp(b + amount, 0, 255);
+}
+
+filter invert() {
+    r = 255 - r;
+    g = 255 - g;
+    b = 255 - b;
+}
+
+img = frame("photo.png");
+
+result = img -> brighten(40) -> invert();
+
+export(result, "result.png");

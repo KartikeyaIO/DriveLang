@@ -1,0 +1,19 @@
+// 04_kernels.drive
+// Define a custom sharpening kernel and use the built-in dynamic blur.
+
+kernel sharpen = [
+    [ 0, -1,  0],
+    [-1,  5, -1],
+    [ 0, -1,  0]
+];
+
+img = frame("landscape.png");
+
+// Apply custom sharpen kernel
+sharpened = img -> sharpen();
+
+// Apply a dynamic box-blur of radius 9 (generated at runtime)
+blurred = img -> blur(9);
+
+export(sharpened, "sharpened.png");
+export(blurred, "blurred.png");
