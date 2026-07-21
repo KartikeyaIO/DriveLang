@@ -133,9 +133,9 @@ slide5 = blank(1080, 1080)
     -> ui_border(10);
 
 txt5_a = text("Write your own filter.", "test_inputs/georgia.ttf", 64, 255, 230, 200);
-txt5_b = text("filter redshift() {", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+txt5_b = text("filter redshift() {}", "test_inputs/georgia.ttf", 44, 100, 220, 150);
 txt5_c = text("    r = r * 1.4;", "test_inputs/georgia.ttf", 44, 180, 185, 200);
-txt5_d = text("}", "test_inputs/georgia.ttf", 44, 100, 220, 150);
+txt5_d = text("{}", "test_inputs/georgia.ttf", 44, 100, 220, 150);
 
 slide5 = slide5
     -> blend(80, 340, txt5_a, 1.0)

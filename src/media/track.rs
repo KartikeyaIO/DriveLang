@@ -188,6 +188,49 @@ impl Track {
 
         Ok(Track::new(sample_rate, channels, buffer))
     }
+    pub fn fade_in(&mut self, duration: TimeStamp) {
+        let fade_secs = duration.to_seconds();
+
+        for frame in &mut self.buffer {
+            let start = frame.time.to_seconds();
+
+            for i in 0..frame.data[0].len() {
+                let t = start + i as f64 / self.sample_rate as f64;
+
+                let gain = if t >= fade_secs {
+                    1.0
+                } else {
+                    (t / fade_secs) as f32
+                };
+
+                for channel in &mut frame.data {
+                    channel[i] *= gain;
+                }
+            }
+        }
+    }
+    pub fn fade_out(&mut self, duration: TimeStamp) {
+        let total = self.duration().to_seconds();
+        let fade_secs = duration.to_seconds();
+
+        for frame in &mut self.buffer {
+            let start = frame.time.to_seconds();
+
+            for i in 0..frame.data[0].len() {
+                let t = start + i as f64 / self.sample_rate as f64;
+
+                let gain = if t <= total - fade_secs {
+                    1.0
+                } else {
+                    ((total - t) / fade_secs).clamp(0.0, 1.0) as f32
+                };
+
+                for channel in &mut frame.data {
+                    channel[i] *= gain;
+                }
+            }
+        }
+    }
     pub fn silence(duration: TimeStamp, sample_rate: u32, channels: u16) -> Self {
         const FRAME_SIZE: usize = 1024;
 

@@ -13,12 +13,12 @@
                 extend: {
                     colors: {
                         drive: {
-                            bg: '#09090b',
-                            card: '#18181b',
-                            border: '#27272a',
-                            accent: '#ffffff',
-                            text: '#d4d4d8',
-                            muted: '#a1a1aa'
+                            bg: '#020617',
+                            card: '#0f172a',
+                            border: '#1e293b',
+                            accent: '#22d3ee',
+                            text: '#cbd5e1',
+                            muted: '#94a3b8'
                         }
                     }
                 }
@@ -30,399 +30,385 @@
 
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #09090b;
-            color: #d4d4d8;
+            background-color: #020617;
+            color: #cbd5e1;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Code block wrapping fix */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* FIXED: Code blocks now scroll horizontally on mobile and preserve strict indentation */
         .code-block {
             background-color: #000000;
-            border: 1px solid #27272a;
-            border-radius: 0.5rem;
+            border: 1px solid #1e293b;
+            border-radius: 0.75rem;
             padding: 1.25rem;
-            overflow-x: hidden;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            color: #e4e4e7;
+            overflow-x: auto;
+            /* Allows horizontal scrolling instead of wrapping */
+            white-space: pre;
+            /* Enforces strict indentation */
+            color: #e2e8f0;
             font-size: 0.875rem;
             line-height: 1.7;
             font-family: 'JetBrains Mono', monospace;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.2);
+            margin-bottom: 1rem;
         }
 
-        .nav-btn.active {
-            background-color: #27272a;
-            color: #ffffff;
-            border-left: 3px solid #ffffff;
+        @media (min-width: 768px) {
+            .nav-btn.active {
+                background-color: rgba(30, 41, 59, 0.5);
+                color: #22d3ee;
+                border-left: 3px solid #22d3ee;
+            }
+
+            .nav-btn {
+                border-left: 3px solid transparent;
+            }
         }
 
-        .nav-btn {
-            border-left: 3px solid transparent;
+        @media (max-width: 767px) {
+            .nav-btn.active {
+                background-color: rgba(34, 211, 238, 0.1);
+                color: #22d3ee;
+                border-bottom: 2px solid #22d3ee;
+            }
+
+            .nav-btn {
+                border-bottom: 2px solid transparent;
+            }
         }
 
-        /* Syntax Highlighting Colors */
         .keyword {
-            color: #93c5fd;
+            color: #c084fc;
         }
 
         .string {
-            color: #86efac;
+            color: #6ee7b7;
         }
 
         .comment {
-            color: #71717a;
+            color: #64748b;
             font-style: italic;
         }
 
         .function {
-            color: #fdf08a;
+            color: #38bdf8;
         }
 
         .operator {
-            color: #f87171;
+            color: #f472b6;
         }
     </style>
 </head>
 
-<body class="min-h-screen flex flex-col antialiased selection:bg-white/20">
+<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500/30">
 
-    <!-- Header -->
     <header
-        class="sticky top-0 z-50 bg-drive-bg/90 backdrop-blur-md border-b border-drive-border px-8 py-4 flex justify-between items-center">
+        class="sticky top-0 z-50 bg-drive-bg/80 backdrop-blur-lg border-b border-drive-border px-4 md:px-8 py-3 md:py-4 flex justify-between items-center">
         <div class="flex items-center space-x-3">
-            <div class="w-8 h-8 rounded bg-white flex items-center justify-center font-bold text-black text-lg">D</div>
-            <h1 class="text-xl font-bold tracking-tight text-white">Learn DriveLang</h1>
+            <div
+                class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-cyan-500/20">
+                D</div>
+            <h1 class="text-lg md:text-xl font-bold tracking-tight text-white">Learn DriveLang</h1>
         </div>
-        <!-- Top Right Repository Button -->
         <a href="https://github.com/KartikeyaIO/DriveLang" target="_blank"
-            class="flex items-center space-x-2 px-4 py-2 bg-white text-black text-sm font-semibold rounded-md hover:bg-gray-200 transition-colors shadow-sm">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            class="flex items-center space-x-2 px-3 py-1.5 md:px-4 md:py-2 bg-white text-black text-xs md:text-sm font-semibold rounded-lg hover:bg-cyan-50 transition-all shadow-sm hover:shadow-cyan-500/20">
+            <svg class="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill-rule="evenodd"
                     d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
                     clip-rule="evenodd" />
             </svg>
-            <span>View Repository</span>
+            <span class="hidden sm:inline">View Repository</span>
+            <span class="sm:hidden">GitHub</span>
         </a>
     </header>
 
-    <!-- Main Layout -->
-    <div class="flex-1 flex max-w-7xl w-full mx-auto">
-
-        <!-- Sidebar Navigation -->
+    <div class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
         <aside
-            class="w-64 border-r border-drive-border shrink-0 py-6 pr-6 hidden md:block overflow-y-auto h-[calc(100vh-73px)] sticky top-[73px]">
-            <h2 class="text-xs font-bold text-drive-muted uppercase tracking-wider mb-3 px-4">Language Features</h2>
-            <nav class="flex flex-col space-y-1" id="nav-menu">
+            class="w-full md:w-64 md:border-r border-b md:border-b-0 border-drive-border shrink-0 md:py-6 md:pr-6 sticky top-[56px] md:top-[73px] bg-drive-bg/95 backdrop-blur z-40 md:h-[calc(100vh-73px)] md:overflow-y-auto">
+            <h2 class="hidden md:block text-xs font-bold text-drive-muted uppercase tracking-wider mb-3 px-4">Language
+                Features</h2>
+
+            <nav class="flex flex-row md:flex-col overflow-x-auto no-scrollbar px-2 py-2 md:p-0 md:space-y-1 snap-x"
+                id="nav-menu">
                 <button onclick="showSection('basics')"
-                    class="nav-btn active text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Program
+                    class="nav-btn active flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Program
                     Structure</button>
                 <button onclick="showSection('filters')"
-                    class="nav-btn text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Filter
-                    Creation & Let</button>
+                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Filter
+                    & Let</button>
                 <button onclick="showSection('pipeline')"
-                    class="nav-btn text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Filter
-                    Application (->)</button>
+                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Pipeline
+                    (->)</button>
                 <button onclick="showSection('masks')"
-                    class="nav-btn text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Spatial
+                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Spatial
                     Masks</button>
                 <button onclick="showSection('audio')"
-                    class="nav-btn text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Audio
+                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Audio
                     Filters</button>
                 <button onclick="showSection('kernels')"
-                    class="nav-btn text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Kernels
-                    (Convolution)</button>
+                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Kernels</button>
                 <button onclick="showSection('prelude')"
-                    class="nav-btn text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Prelude
-                    Functions</button>
+                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Prelude</button>
                 <button onclick="showSection('control')"
-                    class="nav-btn text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Control
+                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Control
                     Flow</button>
                 <button onclick="showSection('builtins')"
-                    class="nav-btn text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-r transition-colors">Built-in
-                    Math</button>
+                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Math
+                    Built-ins</button>
             </nav>
         </aside>
 
-        <!-- Content Area -->
-        <main class="flex-1 py-6 pl-0 md:pl-10 pr-6 w-full overflow-hidden">
+        <main class="flex-1 px-4 py-6 md:pl-10 md:pr-6 w-full overflow-hidden">
 
-            <!-- Section: Basics -->
-            <div id="section-basics" class="content-section w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Program Structure & Types</h2>
-                <p class="text-drive-muted mb-6">A Drive script is a flat sequence of top-level statements executed from
-                    top to bottom[cite: 1]. There are no classes and no entry point boilerplate—the file itself is the
-                    program[cite: 1].</p>
+            <div id="section-basics" class="content-section w-full animate-fade-in">
+                <!-- FIXED: Solid high-contrast text instead of unreadable gradient -->
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Program Structure & Types</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">A Drive script is a flat sequence
+                    of top-level statements executed from top to bottom[cite: 1]. There are no classes and no entry
+                    point boilerplate—the file itself is the program[cite: 1].</p>
 
-                <h3 class="text-xl font-semibold text-white mb-3">Variables & Types</h3>
-                <p class="text-drive-muted mb-4">Variables are assigned with <code>=</code> and live in the global
-                    script scope[cite: 1]. Types are inferred at runtime[cite: 1]. The four primitive types are
-                    <strong>Number</strong>, <strong>String</strong>, <strong>Frame</strong> (images), and
-                    <strong>Track</strong> (audio)[cite: 1].
+                <h3 class="text-lg md:text-xl font-semibold text-white mb-3">Variables & Types</h3>
+                <p class="text-sm md:text-base text-drive-muted mb-4 leading-relaxed">Variables are assigned with
+                    <code>=</code> and live in the global script scope[cite: 1]. Types are inferred at runtime[cite: 1].
+                    The four primitive types are <strong>Number</strong>, <strong>String</strong>,
+                    <strong>Frame</strong> (images), and <strong>Track</strong> (audio)[cite: 1].
                 </p>
 
-                <div class="code-block">
-                    <span class="comment">// 1. Imports execute the file in the current scope[cite: 1]</span>
-                    <span class="keyword">import</span> <span class="string">"my_filters.drive"</span>;
+                <!-- FIXED: Using proper <pre> formatting so the code retains its layout perfectly -->
+                <pre class="code-block"><span class="comment">// 1. Imports execute the file in the current scope[cite: 1]</span>
+<span class="keyword">import</span> <span class="string">"my_filters.drive"</span>;
 
-                    <span class="comment">// 2. Variable Assignment[cite: 1]</span>
-                    x <span class="operator">=</span> 100;
-                    name <span class="operator">=</span> <span class="string">"Drive"</span>;
+<span class="comment">// 2. Variable Assignment[cite: 1]</span>
+x <span class="operator">=</span> 100;
+name <span class="operator">=</span> <span class="string">"Drive"</span>;
 
-                    <span class="comment">// 3. Loading Media (Returns Frame and Track types)[cite: 1]</span>
-                    img <span class="operator">=</span> <span class="function">frame</span>(<span
-                        class="string">"photo.png"</span>);
-                    music <span class="operator">=</span> <span class="function">track</span>(<span
-                        class="string">"audio.wav"</span>);
+<span class="comment">// 3. Loading Media (Returns Frame and Track types)[cite: 1]</span>
+img <span class="operator">=</span> <span class="function">frame</span>(<span class="string">"photo.png"</span>);
+music <span class="operator">=</span> <span class="function">track</span>(<span class="string">"audio.wav"</span>);
 
-                    <span class="comment">// 4. Exporting & Printing[cite: 1]</span>
-                    <span class="function">print</span>(<span class="string">"Processing file {} at scale {}"</span>,
-                    name, x);
-                    <span class="function">export</span>(img, <span class="string">"output.png"</span>);
-                </div>
+<span class="comment">// 4. Exporting & Printing[cite: 1]</span>
+<span class="function">print</span>(<span class="string">"Processing file {} at scale {}"</span>, name, x);
+<span class="function">export</span>(img, <span class="string">"output.png"</span>);</pre>
             </div>
 
-            <!-- Section: Filters & Let -->
             <div id="section-filters" class="content-section hidden w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Filter Creation & The `let` Keyword</h2>
-                <p class="text-drive-muted mb-6">A <code>filter</code> defines a per-pixel operation[cite: 1]. The body
-                    assigns new values to the output channels <code>r</code>, <code>g</code>, <code>b</code>,
-                    <code>a</code>[cite: 1]. Any channel not assigned passes through unchanged[cite: 1].
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Filter Creation & The `let` Keyword</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">A <code>filter</code> defines a
+                    per-pixel operation[cite: 1]. The body assigns new values to the output channels <code>r</code>,
+                    <code>g</code>, <code>b</code>, <code>a</code>[cite: 1]. Any channel not assigned passes through
+                    unchanged[cite: 1].
                 </p>
 
-                <h3 class="text-xl font-semibold text-white mb-3">Parameters and Identifiers</h3>
-                <p class="text-drive-muted mb-4">Inside a filter, you automatically have access to
-                    <code>r, g, b, a</code> (current pixel values 0-255), <code>x, y</code> (coordinates), and
-                    <code>width, height</code> (frame dimensions)[cite: 1].
-                </p>
+                <h3 class="text-lg md:text-xl font-semibold text-white mb-3">Parameters and Identifiers</h3>
+                <p class="text-sm md:text-base text-drive-muted mb-4 leading-relaxed">Inside a filter, you automatically
+                    have access to <code>r, g, b, a</code> (current pixel values 0-255), <code>x, y</code>
+                    (coordinates), and <code>width, height</code> (frame dimensions)[cite: 1].</p>
 
-                <div class="code-block">
-                    <span class="keyword">filter</span> <span class="function">tint_and_brightness</span>(factor,
-                    tint_r) {
-                    <span class="comment">// 'let' declares an intermediate local value scoped to the enclosing
-                        block[cite: 1].</span>
-                    <span class="keyword">let</span> luma <span class="operator">=</span> 0.299 * r <span
-                        class="operator">+</span> 0.587 * g <span class="operator">+</span> 0.114 * b;
+                <pre class="code-block"><span class="keyword">filter</span> <span class="function">tint_and_brightness</span>(factor, tint_r) {
+  <span class="comment">// 'let' declares an intermediate local value scoped to the enclosing block[cite: 1].</span>
+  <span class="keyword">let</span> luma <span class="operator">=</span> 0.299 * r <span class="operator">+</span> 0.587 * g <span class="operator">+</span> 0.114 * b;
 
-                    <span class="comment">// Mutate the outgoing pixel channels[cite: 1].</span>
-                    r <span class="operator">=</span> <span class="function">clamp</span>((luma * factor) <span
-                        class="operator">+</span> tint_r, 0, 255);
-                    g <span class="operator">=</span> <span class="function">clamp</span>(luma * factor, 0, 255);
-                    b <span class="operator">=</span> <span class="function">clamp</span>(luma * factor, 0, 255);
-                    }
-                </div>
+  <span class="comment">// Mutate the outgoing pixel channels[cite: 1].</span>
+  r <span class="operator">=</span> <span class="function">clamp</span>((luma * factor) <span class="operator">+</span> tint_r, 0, 255);
+  g <span class="operator">=</span> <span class="function">clamp</span>(luma * factor, 0, 255);
+  b <span class="operator">=</span> <span class="function">clamp</span>(luma * factor, 0, 255);
+}</pre>
             </div>
 
-            <!-- Section: Pipeline -->
             <div id="section-pipeline" class="content-section hidden w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Filter Application (The Pipeline)</h2>
-                <p class="text-drive-muted mb-6">The pipeline operator <code>-&gt;</code> pipes a Frame or Track through
-                    a sequence of operations left to right[cite: 1]. The base value is mutated in place through each
-                    stage[cite: 1].</p>
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Filter Application (The Pipeline)</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">The pipeline operator
+                    <code>-&gt;</code> pipes a Frame or Track through a sequence of operations left to right[cite: 1].
+                    The base value is mutated in place through each stage[cite: 1].
+                </p>
 
-                <div class="code-block">
-                    <span class="keyword">filter</span> <span class="function">invert</span>() {
-                    r <span class="operator">=</span> 255 <span class="operator">-</span> r;
-                    g <span class="operator">=</span> 255 <span class="operator">-</span> g;
-                    b <span class="operator">=</span> 255 <span class="operator">-</span> b;
-                    }
+                <pre
+                    class="code-block"><span class="keyword">filter</span> <span class="function">invert</span>() {
+  r <span class="operator">=</span> 255 <span class="operator">-</span> r;
+  g <span class="operator">=</span> 255 <span class="operator">-</span> g;
+  b <span class="operator">=</span> 255 <span class="operator">-</span> b;
+}
 
-                    img <span class="operator">=</span> <span class="function">frame</span>(<span
-                        class="string">"photo.png"</span>);
+img <span class="operator">=</span> <span class="function">frame</span>(<span class="string">"photo.png"</span>);
 
-                    <span class="comment">// Apply a chain of filters[cite: 1]. </span>
-                    <span class="comment">// Native filters like resize() and blur() do not require a declaration[cite:
-                        1].</span>
-                    result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span
-                        class="function">resize</span>(800, 600) <span class="operator">-&gt;</span> <span
-                        class="function">invert</span>() <span class="operator">-&gt;</span> <span
-                        class="function">blur</span>(5);
-                </div>
+<span class="comment">// Apply a chain of filters[cite: 1]. </span>
+<span class="comment">// Native filters like resize() and blur() do not require a declaration[cite: 1].</span>
+result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span class="function">resize</span>(800, 600) <span class="operator">-&gt;</span> <span class="function">invert</span>() <span class="operator">-&gt;</span> <span class="function">blur</span>(5);</pre>
             </div>
 
-            <!-- Section: Spatial Masks -->
             <div id="section-masks" class="content-section hidden w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Spatial Masks</h2>
-                <p class="text-drive-muted mb-6">A filter stage can be restricted to a pixel region[cite: 1]. Pixels
-                    outside the mask are left unchanged[cite: 1]. Ranges follow the <code>start..end</code> syntax[cite:
-                    1].</p>
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Spatial Masks</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">A filter stage can be restricted
+                    to a pixel region[cite: 1]. Pixels outside the mask are left unchanged[cite: 1]. Ranges follow the
+                    <code>start..end</code> syntax[cite: 1].
+                </p>
 
-                <div class="code-block">
-                    <span class="keyword">filter</span> <span class="function">red_boost</span>() {
-                    r <span class="operator">=</span> <span class="function">clamp</span>(r <span
-                        class="operator">+</span> 100, 0, 255);
-                    }
+                <pre
+                    class="code-block"><span class="keyword">filter</span> <span class="function">red_boost</span>() {
+  r <span class="operator">=</span> <span class="function">clamp</span>(r <span class="operator">+</span> 100, 0, 255);
+}
 
-                    img <span class="operator">=</span> <span class="function">frame</span>(<span
-                        class="string">"input.png"</span>);
+img <span class="operator">=</span> <span class="function">frame</span>(<span class="string">"input.png"</span>);
 
-                    <span class="comment">// Only apply red_boost to a 300x250 pixel region starting at (100, 50)[cite:
-                        1].</span>
-                    result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span
-                        class="function">red_boost</span>() [100..400, 50..300];
-                </div>
+<span class="comment">// Only apply red_boost to a 300x250 pixel region starting at (100, 50)[cite: 1].</span>
+result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span class="function">red_boost</span>() [100..400, 50..300];</pre>
             </div>
 
-            <!-- Section: Audio Filters -->
             <div id="section-audio" class="content-section hidden w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Audio Filters (af)</h2>
-                <p class="text-drive-muted mb-6">An <code>af</code> is a per-sample operation on a Track[cite: 1]. The
-                    body assigns new values to <code>l</code> (left channel) and <code>r</code> (right channel)[cite:
-                    1].</p>
-
-                <h3 class="text-xl font-semibold text-white mb-3">Audio Identifiers</h3>
-                <p class="text-drive-muted mb-4">Inside an audio filter, you have access to <code>l</code>,
-                    <code>r</code>, <code>time</code> (Time of this sample in seconds), and <code>sr</code> (Sample
-                    rate)[cite: 1].
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Audio Filters (af)</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">An <code>af</code> is a per-sample
+                    operation on a Track[cite: 1]. The body assigns new values to <code>l</code> (left channel) and
+                    <code>r</code> (right channel)[cite: 1].
                 </p>
 
-                <div class="code-block">
-                    <span class="keyword">af</span> <span class="function">auto_pan</span>(speed, master_gain) {
-                    <span class="comment">// Calculate an oscillating pan value using 'time'[cite: 1]</span>
-                    <span class="keyword">let</span> pan <span class="operator">=</span> <span
-                        class="function">sin</span>(time * speed);
+                <h3 class="text-lg md:text-xl font-semibold text-white mb-3">Audio Identifiers</h3>
+                <p class="text-sm md:text-base text-drive-muted mb-4 leading-relaxed">Inside an audio filter, you have
+                    access to <code>l</code>, <code>r</code>, <code>time</code> (Time of this sample in seconds), and
+                    <code>sr</code> (Sample rate)[cite: 1].
+                </p>
 
-                    <span class="comment">// Apply pan and gain to the left and right channels[cite: 1]</span>
-                    l <span class="operator">=</span> <span class="function">clamp</span>(l * (1.0 <span
-                        class="operator">-</span> pan) * master_gain, <span class="operator">-</span>1.0, 1.0);
-                    r <span class="operator">=</span> <span class="function">clamp</span>(r * (1.0 <span
-                        class="operator">+</span> pan) * master_gain, <span class="operator">-</span>1.0, 1.0);
-                    }
+                <pre class="code-block"><span class="keyword">af</span> <span class="function">auto_pan</span>(speed, master_gain) {
+  <span class="comment">// Calculate an oscillating pan value using 'time'[cite: 1]</span>
+  <span class="keyword">let</span> pan <span class="operator">=</span> <span class="function">sin</span>(time * speed);
 
-                    sound <span class="operator">=</span> <span class="function">track</span>(<span
-                        class="string">"music.mp3"</span>);
-                    processed <span class="operator">=</span> sound <span class="operator">-&gt;</span> <span
-                        class="function">auto_pan</span>(2.5, 1.2);
-                    <span class="function">export</span>(processed, <span class="string">"output.wav"</span>);
-                </div>
+  <span class="comment">// Apply pan and gain to the left and right channels[cite: 1]</span>
+  l <span class="operator">=</span> <span class="function">clamp</span>(l * (1.0 <span class="operator">-</span> pan) * master_gain, <span class="operator">-</span>1.0, 1.0);
+  r <span class="operator">=</span> <span class="function">clamp</span>(r * (1.0 <span class="operator">+</span> pan) * master_gain, <span class="operator">-</span>1.0, 1.0);
+}
+
+sound <span class="operator">=</span> <span class="function">track</span>(<span class="string">"music.mp3"</span>);
+processed <span class="operator">=</span> sound <span class="operator">-&gt;</span> <span class="function">auto_pan</span>(2.5, 1.2);
+<span class="function">export</span>(processed, <span class="string">"output.wav"</span>);</pre>
             </div>
 
-            <!-- Section: Kernels -->
             <div id="section-kernels" class="content-section hidden w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Kernels (Convolution)</h2>
-                <p class="text-drive-muted mb-6">A <code>kernel</code> defines a convolution matrix[cite: 1]. The matrix
-                    must be square, and all entries must be numeric literals[cite: 1]. The kernel is automatically
-                    normalised by dividing by the sum of its weights[cite: 1].</p>
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Kernels (Convolution)</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">A <code>kernel</code> defines a
+                    convolution matrix[cite: 1]. The matrix must be square, and all entries must be numeric
+                    literals[cite: 1]. The kernel is automatically normalised by dividing by the sum of its
+                    weights[cite: 1].</p>
 
-                <div class="code-block">
-                    <span class="comment">// Declare a 3x3 sharpen kernel[cite: 1]</span>
-                    <span class="keyword">kernel</span> edge_detect <span class="operator">=</span> [
-                    [<span class="operator">-</span>1, <span class="operator">-</span>1, <span
-                        class="operator">-</span>1],
-                    [<span class="operator">-</span>1, 8, <span class="operator">-</span>1],
-                    [<span class="operator">-</span>1, <span class="operator">-</span>1, <span
-                        class="operator">-</span>1]
-                    ];
+                <pre
+                    class="code-block"><span class="comment">// Declare a 3x3 sharpen kernel[cite: 1]</span>
+<span class="keyword">kernel</span> edge_detect <span class="operator">=</span> [
+  [<span class="operator">-</span>1, <span class="operator">-</span>1, <span class="operator">-</span>1],
+  [<span class="operator">-</span>1,  8, <span class="operator">-</span>1],
+  [<span class="operator">-</span>1, <span class="operator">-</span>1, <span class="operator">-</span>1]
+];
 
-                    img <span class="operator">=</span> <span class="function">frame</span>(<span
-                        class="string">"photo.png"</span>);
-                    <span class="comment">// Kernels are applied as a filter stage in a pipeline[cite: 1]</span>
-                    result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span
-                        class="function">edge_detect</span>();
-                </div>
+img <span class="operator">=</span> <span class="function">frame</span>(<span class="string">"photo.png"</span>);
+<span class="comment">// Kernels are applied as a filter stage in a pipeline[cite: 1]</span>
+result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span class="function">edge_detect</span>();</pre>
             </div>
 
-            <!-- Section: Prelude Functions -->
             <div id="section-prelude" class="content-section hidden w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Prelude Functions</h2>
-                <p class="text-drive-muted mb-6">DriveLang ships with several built-in native operations and functions
-                    that do not require explicit declarations[cite: 1].</p>
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Prelude Functions</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">DriveLang ships with several
+                    built-in native operations and functions that do not require explicit declarations[cite: 1].</p>
 
-                <h3 class="text-xl font-semibold text-white mb-3 mt-6">I/O & Utilities</h3>
-                <ul class="list-disc list-inside text-drive-muted mb-4 space-y-2">
-                    <li><code class="text-white">print("value is {}", x)</code>: Writes to stdout. Numbers print as
-                        integers if they have no fractional part[cite: 1].</li>
-                    <li><code class="text-white">export(media, "output_path")</code>: Exports a Frame as PNG or a Track
-                        as WAV (32-bit float). The path must be a string literal[cite: 1].</li>
+                <h3 class="text-lg md:text-xl font-semibold text-white mb-3 mt-6">I/O & Utilities</h3>
+                <ul class="list-disc list-inside text-sm md:text-base text-drive-muted mb-4 space-y-2">
+                    <li><code class="text-cyan-400 font-mono">print("value is {}", x)</code>: Writes to stdout. Numbers
+                        print as integers if they have no fractional part[cite: 1].</li>
+                    <li><code class="text-cyan-400 font-mono">export(media, "output_path")</code>: Exports a Frame as
+                        PNG or a Track as WAV (32-bit float). The path must be a string literal[cite: 1].</li>
                 </ul>
 
-                <h3 class="text-xl font-semibold text-white mb-3 mt-6">Media Loading (Constructors)</h3>
-                <ul class="list-disc list-inside text-drive-muted mb-4 space-y-2">
-                    <li><code class="text-white">frame("path")</code>: Loads an image file (PNG, JPG, etc.) as
-                        RGBA[cite: 1].</li>
-                    <li><code class="text-white">blank(width, height)</code>: Creates a transparent black RGBA
-                        frame[cite: 1].</li>
-                    <li><code class="text-white">text(str, font_path, size, r, g, b)</code>: Rasterizes a string into a
-                        frame using the given TTF font and RGB colour[cite: 1].</li>
-                    <li><code class="text-white">track("path")</code>: Decodes an audio file (MP3, FLAC, OGG, WAV,
-                        etc.)[cite: 1].</li>
-                    <li><code class="text-white">silence(duration, sample_rate, channels)</code>: Creates a silent track
-                        of the given duration[cite: 1].</li>
+                <h3 class="text-lg md:text-xl font-semibold text-white mb-3 mt-6">Media Loading (Constructors)</h3>
+                <ul class="list-disc list-inside text-sm md:text-base text-drive-muted mb-4 space-y-2">
+                    <li><code class="text-cyan-400 font-mono">frame("path")</code>: Loads an image file (PNG, JPG, etc.)
+                        as RGBA[cite: 1].</li>
+                    <li><code class="text-cyan-400 font-mono">blank(width, height)</code>: Creates a transparent black
+                        RGBA frame[cite: 1].</li>
+                    <li><code class="text-cyan-400 font-mono">text(str, font_path, size, r, g, b)</code>: Rasterizes a
+                        string into a frame using the given TTF font and RGB colour[cite: 1].</li>
+                    <li><code class="text-cyan-400 font-mono">track("path")</code>: Decodes an audio file (MP3, FLAC,
+                        OGG, WAV, etc.)[cite: 1].</li>
+                    <li><code class="text-cyan-400 font-mono">silence(duration, sample_rate, channels)</code>: Creates a
+                        silent track of the given duration[cite: 1].</li>
                 </ul>
 
-                <h3 class="text-xl font-semibold text-white mb-3 mt-6">Native Frame Pipeline Operations</h3>
-                <p class="text-drive-muted mb-4">These are applied via the pipeline operator (<code>-&gt;</code>)
-                    without needing a filter declaration[cite: 1].</p>
-                <ul class="list-disc list-inside text-drive-muted space-y-2">
-                    <li><code class="text-white">resize(w, h)</code>: Performs nearest-neighbour resize[cite: 1].</li>
-                    <li><code class="text-white">crop(x, y, w, h)</code>: Extracts a rectangular region[cite: 1].</li>
-                    <li><code class="text-white">blend(x, y, frame2, alpha)</code>: Alpha-composites <code>frame2</code>
-                        onto the base at <code>(x, y)</code>[cite: 1].</li>
-                    <li><code class="text-white">blur(size)</code>: Generates a box-blur kernel dynamically based on
-                        radius[cite: 1].</li>
+                <h3 class="text-lg md:text-xl font-semibold text-white mb-3 mt-6">Native Frame Pipeline Operations</h3>
+                <p class="text-sm md:text-base text-drive-muted mb-4 leading-relaxed">These are applied via the pipeline
+                    operator (<code>-&gt;</code>) without needing a filter declaration[cite: 1].</p>
+                <ul class="list-disc list-inside text-sm md:text-base text-drive-muted space-y-2">
+                    <li><code class="text-cyan-400 font-mono">resize(w, h)</code>: Performs nearest-neighbour
+                        resize[cite: 1].</li>
+                    <li><code class="text-cyan-400 font-mono">crop(x, y, w, h)</code>: Extracts a rectangular
+                        region[cite: 1].</li>
+                    <li><code class="text-cyan-400 font-mono">blend(x, y, frame2, alpha)</code>: Alpha-composites
+                        <code>frame2</code> onto the base at <code>(x, y)</code>[cite: 1].
+                    </li>
+                    <li><code class="text-cyan-400 font-mono">blur(size)</code>: Generates a box-blur kernel dynamically
+                        based on radius[cite: 1].</li>
                 </ul>
             </div>
 
-            <!-- Section: Control Flow -->
             <div id="section-control" class="content-section hidden w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Control Flow</h2>
-                <p class="text-drive-muted mb-6">Drive supports <code>for</code> loops iterating over a range, and
-                    <code>if / else / elif</code> inside filters and at script level[cite: 1]. Conditionals evaluate any
-                    non-zero number as truthy[cite: 1].
-                </p>
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Control Flow</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">Drive supports <code>for</code>
+                    loops iterating over a range, and <code>if / else / elif</code> inside filters and at script
+                    level[cite: 1]. Conditionals evaluate any non-zero number as truthy[cite: 1].</p>
 
-                <div class="code-block">
-                    <span class="keyword">filter</span> <span class="function">threshold</span>(level) {
-                    <span class="keyword">let</span> luma <span class="operator">=</span> 0.299 * r <span
-                        class="operator">+</span> 0.587 * g <span class="operator">+</span> 0.114 * b;
+                <pre class="code-block"><span class="keyword">filter</span> <span class="function">threshold</span>(level) {
+  <span class="keyword">let</span> luma <span class="operator">=</span> 0.299 * r <span class="operator">+</span> 0.587 * g <span class="operator">+</span> 0.114 * b;
 
-                    <span class="comment">// Conditional inside a filter runs per-pixel[cite: 1]</span>
-                    <span class="keyword">if</span> luma <span class="operator">&gt;</span> level {
-                    r <span class="operator">=</span> 255; g <span class="operator">=</span> 255; b <span
-                        class="operator">=</span> 255;
-                    } <span class="keyword">else</span> {
-                    r <span class="operator">=</span> 0; g <span class="operator">=</span> 0; b <span
-                        class="operator">=</span> 0;
-                    }
-                    }
+  <span class="comment">// Conditional inside a filter runs per-pixel[cite: 1]</span>
+  <span class="keyword">if</span> luma <span class="operator">&gt;</span> level {
+    r <span class="operator">=</span> 255; g <span class="operator">=</span> 255; b <span class="operator">=</span> 255;
+  } <span class="keyword">else</span> {
+    r <span class="operator">=</span> 0; g <span class="operator">=</span> 0; b <span class="operator">=</span> 0;
+  }
+}
 
-                    <span class="comment">// Iterates i over a range[cite: 1]</span>
-                    <span class="keyword">for</span> i <span class="keyword">in</span> 0..10 {
-                    <span class="function">print</span>(<span class="string">"Processing frame iteration {}"</span>, i);
-                    }
+<span class="comment">// Iterates i over a range[cite: 1]</span>
+<span class="keyword">for</span> i <span class="keyword">in</span> 0..10 {
+  <span class="function">print</span>(<span class="string">"Processing frame iteration {}"</span>, i);
+}
 
-                    <span class="comment">// Conditional at the script level[cite: 1]</span>
-                    quality <span class="operator">=</span> 1;
-                    <span class="keyword">if</span> quality <span class="operator">==</span> 1 {
-                    img <span class="operator">-&gt;</span> <span class="function">blur</span>(3);
-                    }
-                </div>
+<span class="comment">// Conditional at the script level[cite: 1]</span>
+quality <span class="operator">=</span> 1;
+<span class="keyword">if</span> quality <span class="operator">==</span> 1 {
+  img <span class="operator">-&gt;</span> <span class="function">blur</span>(3);
+}</pre>
             </div>
 
-            <!-- Section: Builtins -->
             <div id="section-builtins" class="content-section hidden w-full">
-                <h2 class="text-3xl font-bold text-white mb-4">Built-in Math Functions</h2>
-                <p class="text-drive-muted mb-6">DriveLang ships with standard mathematical functions[cite: 1].</p>
+                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Built-in Math Functions</h2>
+                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">DriveLang ships with standard
+                    mathematical functions[cite: 1].</p>
 
-                <div class="grid grid-cols-2 gap-4 text-sm text-drive-muted font-mono mb-6">
-                    <div>
-                        <ul class="space-y-2">
-                            <li><span class="text-white">abs(x)</span></li>
-                            <li><span class="text-white">min(a, b)</span> / <span class="text-white">max(a, b)</span>
-                            </li>
-                            <li><span class="text-white">clamp(x, min, max)</span></li>
-                            <li><span class="text-white">lerp(a, b, t)</span></li>
-                            <li><span class="text-white">smooth_lerp(a, b, t)</span></li>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-drive-muted font-mono mb-6">
+                    <div class="bg-slate-900 p-4 rounded-lg border border-slate-800">
+                        <ul class="space-y-3">
+                            <li><span class="text-cyan-400">abs(x)</span></li>
+                            <li><span class="text-cyan-400">min(a, b)</span> / <span class="text-cyan-400">max(a,
+                                    b)</span></li>
+                            <li><span class="text-cyan-400">clamp(x, min, max)</span></li>
+                            <li><span class="text-cyan-400">lerp(a, b, t)</span></li>
+                            <li><span class="text-cyan-400">smooth_lerp(a, b, t)</span></li>
                         </ul>
                     </div>
-                    <div>
-                        <ul class="space-y-2">
-                            <li><span class="text-white">sin(x)</span> / <span class="text-white">cos(x)</span> / <span
-                                    class="text-white">tan(x)</span></li>
-                            <li><span class="text-white">sqrt(x)</span></li>
-                            <li><span class="text-white">pow(a, b)</span></li>
-                            <li><span class="text-white">floor(x)</span> / <span class="text-white">ceil(x)</span> /
-                                <span class="text-white">round(x)</span>
+                    <div class="bg-slate-900 p-4 rounded-lg border border-slate-800">
+                        <ul class="space-y-3">
+                            <li><span class="text-cyan-400">sin(x)</span> / <span class="text-cyan-400">cos(x)</span> /
+                                <span class="text-cyan-400">tan(x)</span>
                             </li>
-                            <li><span class="text-white">log(x)</span> / <span class="text-white">exp(x)</span></li>
+                            <li><span class="text-cyan-400">sqrt(x)</span></li>
+                            <li><span class="text-cyan-400">pow(a, b)</span></li>
+                            <li><span class="text-cyan-400">floor(x)</span> / <span class="text-cyan-400">ceil(x)</span>
+                                / <span class="text-cyan-400">round(x)</span></li>
+                            <li><span class="text-cyan-400">log(x)</span> / <span class="text-cyan-400">exp(x)</span>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -437,6 +423,10 @@
             document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
             document.getElementById('section-' + id).classList.remove('hidden');
             event.currentTarget.classList.add('active');
+
+            if (window.innerWidth < 768) {
+                event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
         }
     </script>
 </body>
