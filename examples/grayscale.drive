@@ -14,7 +14,7 @@ filter contrast(factor) {
     b = clamp(128 + factor * (b - 128), 0, 255);
 }
 
-img = frame("portrait.png");
+img = frame("../input_image.jpg");
 
 result = img -> grayscale() -> contrast(1.8);
 

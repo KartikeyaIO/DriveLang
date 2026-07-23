@@ -3,7 +3,7 @@ use crate::media::frame::{FrameError, PixelData};
 use crate::media::track::{AudioFrame, Track};
 use crate::media::video::TimeStamp;
 use crate::media::video::VideoFrame;
-
+use std::fmt::{self, write};
 
 use hound::{SampleFormat, WavSpec, WavWriter};
 use image::GenericImageView;
@@ -27,9 +27,25 @@ pub enum IOError {
     FileNotFound,
     InvalidData,
     EncodingFailed,
-    FFmpegError,
-    FFmpegDecodingFailed,
-    ReelError,
+}
+
+impl fmt::Display for IOError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            IOError::EncodingFailed => {
+                write!(f, "The Image cannot be Encoded, check your path")
+            }
+            IOError::FileNotFound => {
+                write!(
+                    f,
+                    "FileNotFound: Check your path the file maybe be missing!"
+                )
+            }
+            IOError::InvalidData => {
+                write!(f, "Data is invalid.")
+            }
+        }
+    }
 }
 
 pub fn load_image(path: &str, fmt: &str) -> Result<Frame, FrameError> {
@@ -317,6 +333,22 @@ pub enum WavEncodeError {
     Io(std::io::Error),
     Hound(hound::Error),
     EmptyTrack,
+}
+
+impl fmt::Display for WavEncodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            WavEncodeError::EmptyTrack => {
+                write!(f, "The Track is Empty!")
+            }
+            WavEncodeError::Hound(e) => {
+                write!(f, "{e}")
+            }
+            WavEncodeError::Io(e) => {
+                write!(f, "{e}")
+            }
+        }
+    }
 }
 
 impl From<std::io::Error> for WavEncodeError {

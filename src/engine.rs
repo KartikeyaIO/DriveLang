@@ -1,40 +1,82 @@
-use std::collections::{HashMap, HashSet};
-use std::path::Path;
 use fontdue::{Font, FontSettings};
+use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::path::Path;
 
+use crate::filter::{AudioFilter, Effect, Filter, Instruction};
+use crate::io::io::{self, IOError};
 use crate::media::track::Track;
 use crate::media::video::TimeStamp;
 use crate::text::Text;
-use crate::filter::{Filter,AudioFilter,Effect, Instruction};
-use crate::io::io::{self, IOError};
 // use crate::io::video_io::{Video, VideoEncoder};
 use crate::media::frame::{Color, Frame, Pos};
 use crate::parser::{
-    BinOp, Channel, ChannelAssign, Expr,EffectDecl,AudioFilterDecl, FilterDecl, Import, Item, Program, Statement,
+    AudioFilterDecl, BinOp, Channel, ChannelAssign, EffectDecl, Expr, FilterDecl, Import, Item,
+    Program, Statement,
 };
 use crate::pipeline::kernel::Kernel;
-use crate::pipeline::pipeline::{AudioPipeline, EffectPipeline, Operation,AudioOperation, Pipeline, PipelineError};
+use crate::pipeline::pipeline::{
+    AudioOperation, AudioPipeline, EffectPipeline, Operation, Pipeline, PipelineError,
+};
 use crate::range::{Mask, Rect, StepRange};
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 
-// #[derive(Clone)]
-// pub struct VideoHandle(pub Rc<RefCell<Video>>);
+fn find_stdlib() -> Option<PathBuf> {
+    // 1. Environment variable
+    if let Ok(dir) = std::env::var("DRIVELANG_STDLIB") {
+        let path = PathBuf::from(dir);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
 
+    // 2. Beside executable
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            let path = parent.join("stdlib");
+            if path.is_dir() {
+                return Some(path);
+            }
+        }
+    }
 
-// impl std::fmt::Debug for VideoHandle {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         let vid = self.0.borrow();
-//         write!(
-//             f,
-//             "Video {{ width: {}, height: {}, fps: {}, frames: {} }}",
-//             vid.width(),
-//             vid.height(),
-//             vid.fps(),
-//             vid.frame_count()
-//         )
-//     }
-// }
+    // 3. User install
+    if let Some(home) = std::env::var_os("HOME") {
+        let candidates = [
+            ".local/share/DriveLang/stdlib",
+            ".local/share/drivelang/stdlib",
+            "DriveLang/stdlib",
+        ];
+
+        for dir in candidates {
+            let path = PathBuf::from(&home).join(dir);
+            if path.is_dir() {
+                return Some(path);
+            }
+        }
+    }
+
+    // 4. Common Unix install locations
+    let system_dirs = [
+        "/usr/local/share/DriveLang/stdlib",
+        "/usr/local/share/drivelang/stdlib",
+        "/usr/share/DriveLang/stdlib",
+        "/usr/share/drivelang/stdlib",
+        "/opt/DriveLang/stdlib",
+        "/opt/drivelang/stdlib",
+    ];
+
+    for dir in system_dirs {
+        let path = PathBuf::from(dir);
+        if path.is_dir() {
+            return Some(path);
+        }
+    }
+
+    None
+}
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -66,6 +108,33 @@ impl From<IOError> for EngineError {
         EngineError::Io(e)
     }
 }
+impl fmt::Display for EngineError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self{
+            EngineError::Compile(s) => {
+                write!(f,"CompilationFailed: {s}")
+            }
+            EngineError::Eval(e) => {
+                write!(f,"{e}")
+            }
+            EngineError::EvalError(s) => {
+                write!(f,"{s}")
+            }
+            EngineError::Io(e) => {
+                write!(f,"{e}")
+            }
+            EngineError::Pipeline(e) => {
+                write!(f,"{e}")
+            }
+            EngineError::UndefinedOp(e) => {
+                write!(f,"UndefinedOOperation: {e}")
+            }
+            EngineError::UndefinedVar(e) => {
+                write!(f,"UndefinedVariable: {e}")
+            }
+        }
+    }
+}
 
 fn compile_expr(
     expr: &Expr,
@@ -74,7 +143,7 @@ fn compile_expr(
     context: CompileContext,
 ) -> Result<Vec<Instruction>, EngineError> {
     let mut out = Vec::new();
-    compile_into(expr, params, param_count, &mut out,&context)?;
+    compile_into(expr, params, param_count, &mut out, &context)?;
     Ok(out)
 }
 fn compile_stmts_for_channel(
@@ -99,13 +168,17 @@ fn compile_stmts_for_channel(
             Statement::Channel(ChannelAssign { channel, value }) => {
                 // Only emit instructions for the channel we're currently building.
                 if channel == target {
-                    compile_into(value, local_scope, param_count, out,context)?;
+                    compile_into(value, local_scope, param_count, out, context)?;
                 }
             }
 
-            Statement::IfElse { cond, true_branch, false_branch } => {
+            Statement::IfElse {
+                cond,
+                true_branch,
+                false_branch,
+            } => {
                 // Emit the condition expression.
-                compile_into(cond, local_scope, param_count, out,context)?;
+                compile_into(cond, local_scope, param_count, out, context)?;
 
                 // Placeholder: jump over true branch if condition is false.
                 let jif_idx = out.len();
@@ -114,7 +187,13 @@ fn compile_stmts_for_channel(
                 // True branch — branch-local let bindings must not leak out.
                 let mut true_scope = local_scope.clone();
                 compile_stmts_for_channel(
-                    true_branch, target, params, param_count, &mut true_scope, out,context
+                    true_branch,
+                    target,
+                    params,
+                    param_count,
+                    &mut true_scope,
+                    out,
+                    context,
                 )?;
 
                 // Placeholder: jump over false branch after true branch executes.
@@ -127,7 +206,13 @@ fn compile_stmts_for_channel(
                 // False branch.
                 let mut false_scope = local_scope.clone();
                 compile_stmts_for_channel(
-                    false_branch, target, params, param_count, &mut false_scope, out,context
+                    false_branch,
+                    target,
+                    params,
+                    param_count,
+                    &mut false_scope,
+                    out,
+                    context,
                 )?;
 
                 // Patch the Jump to land here (after false branch).
@@ -143,12 +228,20 @@ fn compile_channel_program(
     target: Channel,
     params: &[String],
     param_count: usize,
-    context: &CompileContext
+    context: &CompileContext,
 ) -> Result<Vec<Instruction>, EngineError> {
     let mut out = Vec::new();
     // local_scope starts as a copy of params — same as the old code.
     let mut local_scope: Vec<String> = params.to_vec();
-    compile_stmts_for_channel(body, &target, params, param_count, &mut local_scope, &mut out,context)?;
+    compile_stmts_for_channel(
+        body,
+        &target,
+        params,
+        param_count,
+        &mut local_scope,
+        &mut out,
+        context,
+    )?;
 
     // If the channel was never assigned, pass the original value through.
     if out.is_empty() {
@@ -175,104 +268,96 @@ fn compile_into(
         Expr::Int(v) => out.push(Instruction::PushInt(*v)),
         Expr::Float(v) => out.push(Instruction::PushFloat(*v as f32)),
 
-        Expr::Ident(name) => 
-                match context {
-                    CompileContext::Image => {
-                        match name.as_str() {
-                            "r" => out.push(Instruction::LoadR),
-                            "g" => out.push(Instruction::LoadG),
-                            "b" => out.push(Instruction::LoadB),
-                            "a" => out.push(Instruction::LoadA),
+        Expr::Ident(name) => match context {
+            CompileContext::Image => match name.as_str() {
+                "r" => out.push(Instruction::LoadR),
+                "g" => out.push(Instruction::LoadG),
+                "b" => out.push(Instruction::LoadB),
+                "a" => out.push(Instruction::LoadA),
 
-                            "x" => out.push(Instruction::LoadX),
-                            "y" => out.push(Instruction::LoadY),
-                            "width" => out.push(Instruction::LoadWidth),
-                            "height" => out.push(Instruction::LoadHeight),
+                "x" => out.push(Instruction::LoadX),
+                "y" => out.push(Instruction::LoadY),
+                "width" => out.push(Instruction::LoadWidth),
+                "height" => out.push(Instruction::LoadHeight),
 
-                            other => {
-                                if let Some(idx) = params.iter().position(|p| p == other) {
-                                    if idx < param_count {
-                                        out.push(Instruction::LoadParam(idx));
-                                    } else {
-                                        out.push(Instruction::LoadLocal(idx - param_count));
-                                    }
-                                } else {
-                                    return Err(EngineError::Compile(format!(
-                                        "unknown identifier '{other}' in image filter"
-                                    )));
-                                }
-                            }
+                other => {
+                    if let Some(idx) = params.iter().position(|p| p == other) {
+                        if idx < param_count {
+                            out.push(Instruction::LoadParam(idx));
+                        } else {
+                            out.push(Instruction::LoadLocal(idx - param_count));
                         }
-                    }
-
-                    CompileContext::Audio => {
-                        match name.as_str() {
-                            "l" => out.push(Instruction::LoadL),
-                            "r" => out.push(Instruction::LoadR),
-
-                            "time" => out.push(Instruction::LoadTime),
-                            "sr" => out.push(Instruction::LoadSampleRate),
-
-                            other => {
-                                if let Some(idx) = params.iter().position(|p| p == other) {
-                                    if idx < param_count {
-                                        out.push(Instruction::LoadParam(idx));
-                                    } else {
-                                        out.push(Instruction::LoadLocal(idx - param_count));
-                                    }
-                                } else {
-                                    return Err(EngineError::Compile(format!(
-                                        "unknown identifier '{other}' in audio filter"
-                                    )));
-                                }
-                            }
-                        }
-                    }
-
-                    CompileContext::Effect => {
-                        match name.as_str() {
-                            "r" => out.push(Instruction::LoadR),
-                            "g" => out.push(Instruction::LoadG),
-                            "b" => out.push(Instruction::LoadB),
-                            "a" => out.push(Instruction::LoadA),
-
-                            "t" => out.push(Instruction::LoadT),
-
-                            "x" => out.push(Instruction::LoadX),
-                            "y" => out.push(Instruction::LoadY),
-                            "width" => out.push(Instruction::LoadWidth),
-                            "height" => out.push(Instruction::LoadHeight),
-
-                            other => {
-                                if let Some(idx) = params.iter().position(|p| p == other) {
-                                    if idx < param_count {
-                                        out.push(Instruction::LoadParam(idx));
-                                    } else {
-                                        out.push(Instruction::LoadLocal(idx - param_count));
-                                    }
-                                } else {
-                                    return Err(EngineError::Compile(format!(
-                                        "unknown identifier '{other}' in effect"
-                                    )));
-                                }
-                            }
-                        }
+                    } else {
+                        return Err(EngineError::Compile(format!(
+                            "unknown identifier '{other}' in image filter"
+                        )));
                     }
                 }
-            
+            },
+
+            CompileContext::Audio => match name.as_str() {
+                "l" => out.push(Instruction::LoadL),
+                "r" => out.push(Instruction::LoadR),
+
+                "time" => out.push(Instruction::LoadTime),
+                "sr" => out.push(Instruction::LoadSampleRate),
+
+                other => {
+                    if let Some(idx) = params.iter().position(|p| p == other) {
+                        if idx < param_count {
+                            out.push(Instruction::LoadParam(idx));
+                        } else {
+                            out.push(Instruction::LoadLocal(idx - param_count));
+                        }
+                    } else {
+                        return Err(EngineError::Compile(format!(
+                            "unknown identifier '{other}' in audio filter"
+                        )));
+                    }
+                }
+            },
+
+            CompileContext::Effect => match name.as_str() {
+                "r" => out.push(Instruction::LoadR),
+                "g" => out.push(Instruction::LoadG),
+                "b" => out.push(Instruction::LoadB),
+                "a" => out.push(Instruction::LoadA),
+
+                "t" => out.push(Instruction::LoadT),
+
+                "x" => out.push(Instruction::LoadX),
+                "y" => out.push(Instruction::LoadY),
+                "width" => out.push(Instruction::LoadWidth),
+                "height" => out.push(Instruction::LoadHeight),
+
+                other => {
+                    if let Some(idx) = params.iter().position(|p| p == other) {
+                        if idx < param_count {
+                            out.push(Instruction::LoadParam(idx));
+                        } else {
+                            out.push(Instruction::LoadLocal(idx - param_count));
+                        }
+                    } else {
+                        return Err(EngineError::Compile(format!(
+                            "unknown identifier '{other}' in effect"
+                        )));
+                    }
+                }
+            },
+        },
 
         Expr::Neg(inner) => {
-            compile_into(inner, params, param_count, out,context)?;
+            compile_into(inner, params, param_count, out, context)?;
             out.push(Instruction::Neg);
         }
         Expr::Not(inner) => {
-            compile_into(inner, params, param_count, out,context)?;
+            compile_into(inner, params, param_count, out, context)?;
             out.push(Instruction::Not);
         }
 
         Expr::BinOp { op, lhs, rhs } => {
-            compile_into(lhs, params, param_count, out,context)?;
-            compile_into(rhs, params, param_count, out,context)?;
+            compile_into(lhs, params, param_count, out, context)?;
+            compile_into(rhs, params, param_count, out, context)?;
             out.push(match op {
                 BinOp::Add => Instruction::Add,
                 BinOp::Sub => Instruction::Sub,
@@ -298,42 +383,42 @@ fn compile_into(
             // multi-arg builtins handled specially
             match (name.as_str(), args.len()) {
                 ("clamp", 3) => {
-                    compile_into(&args[0], params, param_count, out,context)?;
-                    compile_into(&args[1], params, param_count, out,context)?;
-                    compile_into(&args[2], params, param_count, out,context)?;
+                    compile_into(&args[0], params, param_count, out, context)?;
+                    compile_into(&args[1], params, param_count, out, context)?;
+                    compile_into(&args[2], params, param_count, out, context)?;
                     out.push(Instruction::Clamp);
                     return Ok(());
                 }
                 ("lerp", 3) => {
-                    compile_into(&args[0], params, param_count, out,context)?;
-                    compile_into(&args[1], params, param_count, out,context)?;
-                    compile_into(&args[2], params, param_count, out,context)?;
+                    compile_into(&args[0], params, param_count, out, context)?;
+                    compile_into(&args[1], params, param_count, out, context)?;
+                    compile_into(&args[2], params, param_count, out, context)?;
                     out.push(Instruction::Lerp);
                     return Ok(());
                 }
                 ("smooth_lerp", 3) => {
-                    compile_into(&args[0], params, param_count, out,context)?;
-                    compile_into(&args[1], params, param_count, out,context)?;
-                    compile_into(&args[2], params, param_count, out,context)?;
+                    compile_into(&args[0], params, param_count, out, context)?;
+                    compile_into(&args[1], params, param_count, out, context)?;
+                    compile_into(&args[2], params, param_count, out, context)?;
                     out.push(Instruction::SmoothLerp);
                     return Ok(());
                 }
-                
+
                 ("min", 2) => {
-                    compile_into(&args[0], params, param_count, out,context)?;
-                    compile_into(&args[1], params, param_count, out,context)?;
+                    compile_into(&args[0], params, param_count, out, context)?;
+                    compile_into(&args[1], params, param_count, out, context)?;
                     out.push(Instruction::Min);
                     return Ok(());
                 }
                 ("max", 2) => {
-                    compile_into(&args[0], params, param_count, out,context)?;
-                    compile_into(&args[1], params, param_count, out,context)?;
+                    compile_into(&args[0], params, param_count, out, context)?;
+                    compile_into(&args[1], params, param_count, out, context)?;
                     out.push(Instruction::Max);
                     return Ok(());
                 }
                 ("pow", 2) => {
-                    compile_into(&args[0], params, param_count, out,context)?;
-                    compile_into(&args[1], params, param_count, out,context)?;
+                    compile_into(&args[0], params, param_count, out, context)?;
+                    compile_into(&args[1], params, param_count, out, context)?;
                     out.push(Instruction::Pow);
                     return Ok(());
                 }
@@ -347,7 +432,7 @@ fn compile_into(
                     args.len()
                 )));
             }
-            compile_into(&args[0], params, param_count, out,context)?;
+            compile_into(&args[0], params, param_count, out, context)?;
             out.push(match name.as_str() {
                 "abs" => Instruction::Abs,
                 "sin" => Instruction::Sin,
@@ -380,15 +465,26 @@ enum CompileContext {
     Image,
     Audio,
     Effect,
-    
 }
 pub fn compile_audiofilter_decl(decl: &AudioFilterDecl) -> Result<AudioFilter, EngineError> {
     let param_count = decl.params.len();
     Ok(AudioFilter {
         name: decl.name.clone(),
         params: decl.params.clone(),
-        l_program: compile_channel_program(&decl.body, Channel::L, &decl.params, param_count, &CompileContext::Audio)?,
-        r_program: compile_channel_program(&decl.body, Channel::R, &decl.params, param_count,&CompileContext::Audio)?,
+        l_program: compile_channel_program(
+            &decl.body,
+            Channel::L,
+            &decl.params,
+            param_count,
+            &CompileContext::Audio,
+        )?,
+        r_program: compile_channel_program(
+            &decl.body,
+            Channel::R,
+            &decl.params,
+            param_count,
+            &CompileContext::Audio,
+        )?,
     })
 }
 
@@ -397,10 +493,34 @@ pub fn compile_filter_decl(decl: &FilterDecl) -> Result<Filter, EngineError> {
     Ok(Filter {
         name: decl.name.clone(),
         params: decl.params.clone(),
-        r_program: compile_channel_program(&decl.body, Channel::R, &decl.params, param_count,&CompileContext::Image)?,
-        g_program: compile_channel_program(&decl.body, Channel::G, &decl.params, param_count,&CompileContext::Image)?,
-        b_program: compile_channel_program(&decl.body, Channel::B, &decl.params, param_count,&CompileContext::Image)?,
-        a_program: compile_channel_program(&decl.body, Channel::A, &decl.params, param_count,&CompileContext::Image)?,
+        r_program: compile_channel_program(
+            &decl.body,
+            Channel::R,
+            &decl.params,
+            param_count,
+            &CompileContext::Image,
+        )?,
+        g_program: compile_channel_program(
+            &decl.body,
+            Channel::G,
+            &decl.params,
+            param_count,
+            &CompileContext::Image,
+        )?,
+        b_program: compile_channel_program(
+            &decl.body,
+            Channel::B,
+            &decl.params,
+            param_count,
+            &CompileContext::Image,
+        )?,
+        a_program: compile_channel_program(
+            &decl.body,
+            Channel::A,
+            &decl.params,
+            param_count,
+            &CompileContext::Image,
+        )?,
     })
 }
 
@@ -410,7 +530,6 @@ pub fn compile_filter_decl(decl: &FilterDecl) -> Result<Filter, EngineError> {
 //     let mut b_program = Vec::new();
 //     let mut a_program = Vec::new();
 //     let mut t_program = Vec::new();
-    
 
 //     // Track local variables active in this filter's scope.
 //     // We clone the filter's input parameters into it so they act like local variables!
@@ -553,9 +672,7 @@ impl Engine {
             imported_files: HashSet::new(),
         }
     }
-    
 
-   
     fn import_file(&mut self, path: &str) -> Result<(), EngineError> {
         if self.imported_files.contains(path) {
             return Ok(());
@@ -590,14 +707,19 @@ impl Engine {
                     }
 
                     Import::Std(path) => {
-                        let exe = std::env::current_exe().unwrap();
-                        let mut std_path = exe.parent().unwrap().to_string_lossy().to_string();
+                        let mut std = match find_stdlib() {
+                            Some(value) => value,
+                            None => {
+                                return Err(EngineError::Io(IOError::FileNotFound));
+                            }
+                        };
+                        for component in path.iter().skip(1) {
+                            std.push(component);
+                        }
 
-                        std_path.push_str("/stdlib/");
-                        std_path.push_str(&path.iter().skip(1).cloned().collect::<Vec<_>>().join("/"));
-                        std_path.push_str(".drive");
+                        std.set_extension("drive");
 
-                        self.import_file(&std_path)?;
+                        self.import_file(std.to_str().unwrap())?;
                     }
                 }
 
@@ -605,7 +727,7 @@ impl Engine {
             }
             Item::AudioFilterDecl(decl) => {
                 let afilter = compile_audiofilter_decl(decl)?;
-                self.afilters.insert(decl.name.clone(),afilter);
+                self.afilters.insert(decl.name.clone(), afilter);
                 Ok(())
             }
 
@@ -619,25 +741,37 @@ impl Engine {
             //     self.effects.insert(decl.name.clone(),effect);
             //     Ok(())
             // }
-            Item::ForLoop { variable, range, items } => {
+            Item::ForLoop {
+                variable,
+                range,
+                items,
+            } => {
                 let step_range = self.expr_to_step_range(range)?;
-                
+
                 for val in step_range.iter() {
                     // Inject the loop variable into the Engine's global scope!
-                    self.vars.insert(variable.clone(), Value::Number(val as f64));
-                    
-                   
+                    self.vars
+                        .insert(variable.clone(), Value::Number(val as f64));
+
                     for inner_item in items {
                         self.exec_item(inner_item)?;
                     }
                 }
                 Ok(())
             }
-            Item::IfElse { cond, true_branch, false_branch } => {
+            Item::IfElse {
+                cond,
+                true_branch,
+                false_branch,
+            } => {
                 let cond_val = self.eval(cond)?;
                 let is_true = match cond_val {
                     Value::Number(n) => n != 0.0,
-                    _ => return Err(EngineError::EvalError("If condition must be a number".into())),
+                    _ => {
+                        return Err(EngineError::EvalError(
+                            "If condition must be a number".into(),
+                        ));
+                    }
                 };
 
                 let branch_to_run = if is_true { true_branch } else { false_branch };
@@ -669,7 +803,6 @@ impl Engine {
 
                     let replacement = match self.eval(&args[arg_index])? {
                         Value::Number(n) => {
-                            
                             if n.fract() == 0.0 {
                                 (n as i64).to_string()
                             } else {
@@ -677,10 +810,12 @@ impl Engine {
                             }
                         }
                         Value::String(s) => s,
-                        Value::Frame(_) => return Err(EngineError::Eval(
-                            "cannot print a Frame".into(),
-                        )),
-                        Value::Track(_) => return Err(EngineError::Eval("cannot print a Track".into())),
+                        Value::Frame(_) => {
+                            return Err(EngineError::Eval("cannot print a Frame".into()));
+                        }
+                        Value::Track(_) => {
+                            return Err(EngineError::Eval("cannot print a Track".into()));
+                        }
                     };
 
                     str.replace_range(placeholder_pos..placeholder_pos + 2, &replacement);
@@ -720,23 +855,26 @@ impl Engine {
                         ));
                     }
                 };
-                match value{
-                    Value::Frame(f) => {io::encode_image(&f, &path_str).map_err(|_| EngineError::Eval("Image Export Failed! Either Frame is Empty or invalid".into()))?;}
+                match value {
+                    Value::Frame(f) => {
+                        io::encode_image(&f, &path_str).map_err(|_| {
+                            EngineError::Eval(
+                                "Image Export Failed! Either Frame is Empty or invalid".into(),
+                            )
+                        })?;
+                    }
                     Value::Track(t) => {
                         let path = Path::new(&path_str);
                         io::encode_wav(&t, path).expect("Encoding Audio failed! Invalid Track");
                     }
 
-                    
-                
                     _ => {}
                 }
-                
+
                 Ok(())
-            
+            }
         }
     }
-}
 
     // ── Evaluation ──────────────────────────────────────────────────────────
 
@@ -836,30 +974,31 @@ impl Engine {
 
             Expr::Call { path, args } => self.eval_call(path, args),
 
-            Expr::Pipe { base, stages } => {
-                
-                match self.eval(base)? {
-                    Value::Frame(mut frame) => {
-                        let mut pipeline = EffectPipeline { operations: Vec::new() };
-                        for stage in stages {
-                            pipeline.operations.push(self.compile_stage(stage)?);
-                        }
-                        pipeline.execute(&mut frame)?;
-                        Ok(Value::Frame(frame))
+            Expr::Pipe { base, stages } => match self.eval(base)? {
+                Value::Frame(mut frame) => {
+                    let mut pipeline = EffectPipeline {
+                        operations: Vec::new(),
+                    };
+                    for stage in stages {
+                        pipeline.operations.push(self.compile_stage(stage)?);
                     }
-                    Value::Track(mut track) => {
-                        let mut pipeline = AudioPipeline { operations: Vec::new() };
-                        for stage in stages {
-                            pipeline.operations.push(self.compile_audio(stage)?);
-                        }
-                        pipeline.execute(&mut track)?;
-                        Ok(Value::Track(track))
-                    }
-                    _ => Err(EngineError::Eval(
-                        "Piping '->' is only supported on Frames and Tracks!".into(),
-                    )),
+                    pipeline.execute(&mut frame)?;
+                    Ok(Value::Frame(frame))
                 }
-            }
+                Value::Track(mut track) => {
+                    let mut pipeline = AudioPipeline {
+                        operations: Vec::new(),
+                    };
+                    for stage in stages {
+                        pipeline.operations.push(self.compile_audio(stage)?);
+                    }
+                    pipeline.execute(&mut track)?;
+                    Ok(Value::Track(track))
+                }
+                _ => Err(EngineError::Eval(
+                    "Piping '->' is only supported on Frames and Tracks!".into(),
+                )),
+            },
 
             other => Err(EngineError::Eval(format!(
                 "cannot evaluate expression: {other:?}"
@@ -875,54 +1014,62 @@ impl Engine {
                     Some(Expr::Str(s)) => s.clone(),
                     _ => return Err(EngineError::Eval("load() requires a string path".into())),
                 };
-                
+
                 let frame = io::load_image(&path_str, "rgba")
                     .map_err(|e| EngineError::Eval(format!("{e}")))?;
                 Ok(Value::Frame(frame))
             }
             "track" => {
-                let path_str = match args.first(){
+                let path_str = match args.first() {
                     Some(Expr::Str(s)) => s.clone(),
-                    _=> return Err(EngineError::Eval("track() requires a string path".into())),
+                    _ => return Err(EngineError::Eval("track() requires a string path".into())),
                 };
                 let path = Path::new(&path_str);
-                let track = io::decode_audio(path).map_err(|_| EngineError::Eval(format!("Audio Decoding Failed, Check Path....")))?;
+                let track = io::decode_audio(path).map_err(|_| {
+                    EngineError::Eval(format!("Audio Decoding Failed, Check Path...."))
+                })?;
                 Ok(Value::Track(track))
             }
             "text" => {
                 if args.len() < 6 {
-                    return Err(EngineError::EvalError("text() needs 6 args: str,font_path, size, r, g, b,".into()));
+                    return Err(EngineError::EvalError(
+                        "text() needs 6 args: str,font_path, size, r, g, b,".into(),
+                    ));
                 }
-                
-                
+
                 let text_content = match &args[0] {
-                    Expr::Str(s) => s.clone(), 
-                    _ => return Err(EngineError::EvalError("First arg to text() must be string".into())),
+                    Expr::Str(s) => s.clone(),
+                    _ => {
+                        return Err(EngineError::EvalError(
+                            "First arg to text() must be string".into(),
+                        ));
+                    }
                 };
-                let font_path= self.eval_string(&args[1])?;
-                
-                
+                let font_path = self.eval_string(&args[1])?;
+
                 let size = self.eval_number(&args[2])? as f32;
                 let r = self.eval_number(&args[3])? as u8;
                 let g = self.eval_number(&args[4])? as u8;
                 let b = self.eval_number(&args[5])? as u8;
-                let bytes = match  std::fs::read(font_path){
+                let bytes = match std::fs::read(font_path) {
                     Ok(b) => b,
                     Err(_) => return Err(EngineError::Eval("Invalid Font Path".into())),
                 };
-                let font = Font::from_bytes(bytes, FontSettings::default()).expect("Font Loading Failed, check path");
+                let font = Font::from_bytes(bytes, FontSettings::default())
+                    .expect("Font Loading Failed, check path");
 
-                
-                
-                
-                
-                
-                let mut txt_obj = Text::new(&text_content, font,size, Pos(0,0),Color::RGBA(r, g, b,255));
+                let mut txt_obj = Text::new(
+                    &text_content,
+                    font,
+                    size,
+                    Pos(0, 0),
+                    Color::RGBA(r, g, b, 255),
+                );
                 let frame = txt_obj.picturize().expect("Text Conversion Failed!");
-                
+
                 Ok(Value::Frame(frame))
             }
-            
+
             "blank" => {
                 if args.len() != 2 {
                     return Err(EngineError::Eval(
@@ -942,13 +1089,12 @@ impl Engine {
                     ));
                 }
 
-                let dur = self.eval_number(&args[0])? ;
+                let dur = self.eval_number(&args[0])?;
                 let duration = TimeStamp::from_seconds(dur, 1, 44100);
                 let sample_rate = self.eval_number(&args[1])? as u32;
                 let channel = self.eval_number(&args[2])? as u16;
 
-
-                Ok(Value::Track(Track::silence(duration, sample_rate,channel)))
+                Ok(Value::Track(Track::silence(duration, sample_rate, channel)))
             }
 
             other => Err(EngineError::UndefinedOp(format!(
@@ -968,8 +1114,12 @@ impl Engine {
     fn eval_export(&mut self, expr: &Expr) -> Result<Value, EngineError> {
         match self.eval(expr)? {
             Value::Track(t) => Ok(Value::Track(t)),
-            Value::Number(_) => Err(EngineError::Eval("expected a track/frame, got a number".into())),
-            Value::String(_) => Err(EngineError::Eval("expectd a track/frame found string".into())),
+            Value::Number(_) => Err(EngineError::Eval(
+                "expected a track/frame, got a number".into(),
+            )),
+            Value::String(_) => Err(EngineError::Eval(
+                "expectd a track/frame found string".into(),
+            )),
             Value::Frame(f) => Ok(Value::Frame(f)),
         }
     }
@@ -988,14 +1138,16 @@ impl Engine {
             Value::Number(n) => Ok(n),
             Value::Frame(_) => Err(EngineError::Eval("expected a number, got a frame".into())),
             Value::String(_) => Err(EngineError::Eval("expectd a number found string".into())),
-            Value::Track(_) => Err(EngineError::Eval(("expected a number found track".into())))
+            Value::Track(_) => Err(EngineError::Eval(("expected a number found track".into()))),
         }
     }
     fn eval_string(&mut self, expr: &Expr) -> Result<String, EngineError> {
         let val = self.eval(expr)?;
         match val {
             Value::String(s) => Ok(s),
-            _ => Err(EngineError::EvalError("Expected a string! Did you pass a number to a spelling bee?".into())),
+            _ => Err(EngineError::EvalError(
+                "Expected a string! Did you pass a number to a spelling bee?".into(),
+            )),
         }
     }
 
@@ -1006,7 +1158,10 @@ impl Engine {
         }
         Ok(n as usize)
     }
-    fn compile_audio(&mut self, stage: &crate::parser::PipeStage) -> Result<AudioOperation, EngineError> {
+    fn compile_audio(
+        &mut self,
+        stage: &crate::parser::PipeStage,
+    ) -> Result<AudioOperation, EngineError> {
         let name = stage
             .path
             .last()
@@ -1018,13 +1173,13 @@ impl Engine {
             match self.eval(arg)? {
                 Value::Number(v) => params.push(v as f32),
                 _ => {
-                    return Err(EngineError::Eval(
-                        format!("Audio filter '{}' only accepts numeric parameters.", name)
-                    ));
+                    return Err(EngineError::Eval(format!(
+                        "Audio filter '{}' only accepts numeric parameters.",
+                        name
+                    )));
                 }
             }
         }
-        
 
         let filter = self
             .afilters
@@ -1048,35 +1203,50 @@ impl Engine {
 
         if name.as_str() == "resize" {
             if stage.args.len() != 2 {
-                return Err(EngineError::Compile("resize requires exactly 2 arguments: (width, height)".into()));
+                return Err(EngineError::Compile(
+                    "resize requires exactly 2 arguments: (width, height)".into(),
+                ));
             }
             let width = self.eval_number(&stage.args[0])?.max(1.0) as u32;
             let height = self.eval_number(&stage.args[1])?.max(1.0) as u32;
             return Ok(Operation::NativeResize { width, height });
         }
-        
+
         // Let users crop safely: `img -> crop(10, 10, 500, 500)`
         if name.as_str() == "crop" {
             if stage.args.len() != 4 {
-                return Err(EngineError::Compile("crop requires exactly 4 arguments: (x, y, width, height)".into()));
+                return Err(EngineError::Compile(
+                    "crop requires exactly 4 arguments: (x, y, width, height)".into(),
+                ));
             }
             let x = self.eval_number(&stage.args[0])?.max(0.0) as u32;
             let y = self.eval_number(&stage.args[1])?.max(0.0) as u32;
             let width = self.eval_number(&stage.args[2])?.max(1.0) as u32;
             let height = self.eval_number(&stage.args[3])?.min(1.0) as u32;
-            return Ok(Operation::NativeCrop { x, y, width, height });
+            return Ok(Operation::NativeCrop {
+                x,
+                y,
+                width,
+                height,
+            });
         }
         if name.as_str() == "blend" {
             if stage.args.len() != 4 {
-                return Err(EngineError::Compile("blend requires exactly 4 arguments: (x, y, frame, alpha)".into()));
+                return Err(EngineError::Compile(
+                    "blend requires exactly 4 arguments: (x, y, frame, alpha)".into(),
+                ));
             }
             let x = self.eval_number(&stage.args[0])?.max(0.0) as u32;
             let y = self.eval_number(&stage.args[1])?.max(0.0) as u32;
             let frame = self.eval_frame(&stage.args[2]).expect("Not a valid Frame.");
-            let alpha = self.eval_number(&stage.args[3])?.max(0.0) ;
-            return Ok(Operation::Blend { x, y, frame2: frame, alpha });
+            let alpha = self.eval_number(&stage.args[3])?.max(0.0);
+            return Ok(Operation::Blend {
+                x,
+                y,
+                frame2: frame,
+                alpha,
+            });
         }
-        
 
         let mask = match &stage.mask {
             Some((x_range, y_range)) => Some(self.build_mask(x_range, y_range)?),

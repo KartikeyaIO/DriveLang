@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone)]
 pub struct Token {
     /// The Token Struct has Three values
@@ -31,7 +33,7 @@ pub enum TokenKind {
     In,
     AudioFilter,
     LessEqual,
-    
+
     And,
     Or,
     Not,
@@ -95,6 +97,26 @@ pub enum LexError {
     }, // The Invalid Number Error Tells the user the number is invalid
 }
 
+impl fmt::Display for LexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LexError::InvalidCharacter { ch, line, message } => {
+                write!(f, "InvalidCharater: line: {line}, '{ch}' {message}")
+            }
+            LexError::UnterminatedString { line, message } => {
+                write!(f, "UnterminatedString: line: {line}, {message}")
+            }
+            LexError::InvalidNumber {
+                value,
+                line,
+                message,
+            } => {
+                write!(f, "line: {line}, '{value}' {message}")
+            }
+        }
+    }
+}
+
 pub fn char_to_token(c: char) -> Option<TokenKind> {
     match c {
         '(' => Some(TokenKind::LeftParen),
@@ -136,7 +158,7 @@ fn identify_token(s: &str) -> TokenKind {
         "not" => TokenKind::Not,
         "let" => TokenKind::Let,
         "print" => TokenKind::Print,
-       // "effect" => TokenKind::Effect,
+        // "effect" => TokenKind::Effect,
         _ => TokenKind::Identifier,
     }
 }

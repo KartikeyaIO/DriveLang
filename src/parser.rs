@@ -1,5 +1,5 @@
 use crate::lexer::{Token, TokenKind};
-
+use std::fmt;
 
 // ─────────────────────────────────────────────────────────────────────────
 // AST
@@ -55,8 +55,6 @@ pub enum Expr {
     // NEW: Array literals for Kernel matrices like `[[1, 2, 1], [2, 4, 2], [1, 2, 1]]`
     Array(Vec<Expr>),
     Not(Box<Expr>),
-    
-    
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -85,17 +83,16 @@ pub struct ChannelAssign {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Channel(ChannelAssign),
-    Let { name: String, value: Expr },
-    
+    Let {
+        name: String,
+        value: Expr,
+    },
 
     IfElse {
         cond: Box<Expr>,
         true_branch: Vec<Statement>,
         false_branch: Vec<Statement>,
     },
-    
-    
-
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -113,7 +110,7 @@ pub struct AudioFilterDecl {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct EffectDecl{
+pub struct EffectDecl {
     pub name: String,
     pub params: Vec<String>,
     pub body: Vec<Statement>,
@@ -122,17 +119,28 @@ pub struct EffectDecl{
 #[derive(Debug, Clone, PartialEq)]
 pub enum Item {
     Import(Import),
-    Print { args: Vec<Expr> },
-    Assign { name: String, value: Expr },
+    Print {
+        args: Vec<Expr>,
+    },
+    Assign {
+        name: String,
+        value: Expr,
+    },
     //EffectDecl(EffectDecl),
     FilterDecl(FilterDecl),
     AudioFilterDecl(AudioFilterDecl),
-    KernelDecl { name: String, matrix: Expr },
-    Export { value: Expr, path: Expr },
+    KernelDecl {
+        name: String,
+        matrix: Expr,
+    },
+    Export {
+        value: Expr,
+        path: Expr,
+    },
     ForLoop {
         variable: String,
         range: Box<Expr>,
-        items : Vec<Item>,
+        items: Vec<Item>,
     },
     IfElse {
         cond: Box<Expr>,
@@ -145,8 +153,6 @@ pub enum Item {
 pub struct Program {
     pub items: Vec<Item>,
 }
-
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParseError {
@@ -166,10 +172,10 @@ pub enum ParseError {
         name: String,
         line: usize,
     },
-    TimeError{
+    TimeError {
         message: String,
         line: usize,
-    }
+    },
 }
 
 impl std::fmt::Display for ParseError {
@@ -193,13 +199,11 @@ impl std::fmt::Display for ParseError {
                 )
             }
             ParseError::TimeError { message, line } => {
-                write!(f,"line {line}: {message}")
+                write!(f, "line {line}: {message}")
             }
         }
     }
 }
-
-impl std::error::Error for ParseError {}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Parser
@@ -290,14 +294,18 @@ impl<'a> Parser<'a> {
                 self.expect(TokenKind::In, "in")?;
                 let range = Box::new(self.parse_expr()?);
                 self.expect(TokenKind::LeftBrace, "{")?;
-                
+
                 let mut items = Vec::new();
                 while !self.check(&TokenKind::RightBrace) {
                     items.push(self.parse_item()?);
                 }
                 self.expect(TokenKind::RightBrace, "}")?;
-                
-                Ok(Item::ForLoop { variable, range, items })
+
+                Ok(Item::ForLoop {
+                    variable,
+                    range,
+                    items,
+                })
             }
             TokenKind::If => {
                 // (Very similar to statement if/else, just for Items!)
@@ -319,7 +327,11 @@ impl<'a> Parser<'a> {
                     }
                     self.expect(TokenKind::RightBrace, "}")?;
                 }
-                Ok(Item::IfElse { cond, true_branch, false_branch })
+                Ok(Item::IfElse {
+                    cond,
+                    true_branch,
+                    false_branch,
+                })
             }
             other => Err(ParseError::UnexpectedToken {
                 expected: "import, filter, kernel, export, or assignment".to_string(),
@@ -388,13 +400,12 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::LeftBrace, "'{'")?;
         let mut body = Vec::new();
         while !self.check(&TokenKind::RightBrace) {
-           body.push(self.parse_statement("filter")?);
+            body.push(self.parse_statement("filter")?);
         }
         self.expect(TokenKind::RightBrace, "'}'")?;
 
         Ok(Item::FilterDecl(FilterDecl { name, params, body }))
     }
-
 
     fn parse_audiofilter_decl(&mut self) -> PResult<Item> {
         self.expect(TokenKind::AudioFilter, "'af'")?;
@@ -417,13 +428,16 @@ impl<'a> Parser<'a> {
         self.expect(TokenKind::LeftBrace, "'{'")?;
         let mut body = Vec::new();
         while !self.check(&TokenKind::RightBrace) {
-           body.push(self.parse_statement("af")?);
+            body.push(self.parse_statement("af")?);
         }
         self.expect(TokenKind::RightBrace, "'}'")?;
 
-        Ok(Item::AudioFilterDecl(AudioFilterDecl { name, params, body }))
+        Ok(Item::AudioFilterDecl(AudioFilterDecl {
+            name,
+            params,
+            body,
+        }))
     }
-
 
     // Effect Declarations...
     // fn parse_effect_decl(&mut self) -> PResult<Item> {
@@ -463,16 +477,11 @@ impl<'a> Parser<'a> {
 
         Ok(Item::KernelDecl { name, matrix })
     }
-    
-        
-
-
-    
 
     fn parse_channel_assign(&mut self, caller: &str) -> PResult<ChannelAssign> {
         let tok = self.peek().clone();
         let name = self.expect_identifier("a channel name")?;
-        
+
         // 🚨 STRICT CHANNEL BOUNCER 🚨
         let channel = match (caller, name.as_str()) {
             ("af", "l") => Channel::L,
@@ -547,7 +556,7 @@ impl<'a> Parser<'a> {
     fn parse_statement_if_else(&mut self, caller: &str) -> PResult<Statement> {
         self.advance(); // consume 'if' or 'elif'
         let cond = Box::new(self.parse_expr()?);
-        
+
         self.expect(TokenKind::LeftBrace, "{")?;
         let mut true_branch = Vec::new();
         while !self.check(&TokenKind::RightBrace) {
@@ -568,7 +577,11 @@ impl<'a> Parser<'a> {
             false_branch.push(self.parse_statement_if_else(caller)?);
         }
 
-        Ok(Statement::IfElse { cond, true_branch, false_branch })
+        Ok(Statement::IfElse {
+            cond,
+            true_branch,
+            false_branch,
+        })
     }
 
     pub fn parse_expr(&mut self) -> PResult<Expr> {
@@ -903,12 +916,11 @@ pub enum ParseOrLexError {
     Parse(ParseError),
 }
 
-
 impl std::fmt::Display for ParseOrLexError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseOrLexError::Lex(e) => write!(f, "lex error: {e:?}"),
-            ParseOrLexError::Parse(e) => write!(f, "parse error: {e}"),
+            ParseOrLexError::Lex(e) => write!(f, "{e}"),
+            ParseOrLexError::Parse(e) => write!(f, "{e}"),
         }
     }
 }

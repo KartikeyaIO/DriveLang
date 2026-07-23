@@ -1,5 +1,5 @@
 use drive::cli;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    cli::run_cli().expect("cli run Failed!");
+    cli::run_cli()?;
     Ok(())
 }

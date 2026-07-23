@@ -209,10 +209,7 @@ impl fmt::Display for FrameError {
                 write!(f, "Opacity Value must be between 0 and 100")
             }
             FrameError::EmptyFrame => {
-                write!(
-                    f,
-                    "The data in Frame is Empty! The Image might be corrupted."
-                )
+                write!(f, "FileNotFound: The file does not exist")
             }
             FrameError::YUVNotApplied => {
                 write!(f, "YUV Format is Not Implemented for this function.")
@@ -780,10 +777,13 @@ impl Frame {
                         a_out[dst_idx] = a[src_idx];
                     }
                 }
-                Frame::new(target_w, target_h, PixelData::RGBA(r_out, g_out, b_out, a_out))
+                Frame::new(
+                    target_w,
+                    target_h,
+                    PixelData::RGBA(r_out, g_out, b_out, a_out),
+                )
             }
             PixelData::YUV420(..) => Err(FrameError::YUVNotApplied),
         }
     }
 }
-
