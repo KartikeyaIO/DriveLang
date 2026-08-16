@@ -6,7 +6,10 @@ pipelines, built in Rust.
 DriveLang provides a simple, pipeline-based syntax for building image
 processing workflows with a fast and predictable execution model.
 
+
 ------------------------------------------------------------------------
+
+
 
 # Installation
 
@@ -20,7 +23,7 @@ page.
 3.  Open a terminal in the extracted folder.
 4.  Run:
 
-    drive.exe your_file.drive
+    drive.exe run your_file.drive
 
 5. Add drive.exe to PATH
 
@@ -29,14 +32,14 @@ page.
 Extract the archive and run:
 
     chmod +x drive
-    ./drive your_file.drive
+    ./drive run your_file.drive
 
 ## macOS
 
 Extract the archive and run:
 
     chmod +x drive
-    ./drive your_file.drive
+    ./drive run your_file.drive
 
 ------------------------------------------------------------------------
 
@@ -49,6 +52,7 @@ Extract the archive and run:
 
 -   GUIDE.md contains the complete language documentation.
 -   examples/ contains sample DriveLang programs.
+> Do not forget to change the Path in the Examples or they will Not Execute.
 -   stdlib/ contains the standard library included with DriveLang.
 
 ------------------------------------------------------------------------
@@ -68,7 +72,7 @@ Extract the archive and run:
 
 - Save it as hello.drive and run:
 
-    `drive hello.drive`
+    `drive run hello.drive`
 
 ---
 
