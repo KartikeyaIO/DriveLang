@@ -1,0 +1,38 @@
+{
+    "name": "drive",
+    "displayName": "Drive",
+    "description": "Syntax highlighting for DriveLang",
+    "version": "0.0.1",
+    "publisher": "KartikeyaIO",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "drive",
+                "aliases": [
+                    "DriveLang",
+                    "drive"
+                ],
+                "extensions": [
+                    ".drive"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "drive",
+                "scopeName": "source.drive",
+                "path": "./syntaxes/drivelang.tmLanguage.json"
+            }
+        ]
+    },
+    "devDependencies": {
+        "@vscode/vsce": "^4.0.0"
+    }
+}

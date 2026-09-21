@@ -1,0 +1,336 @@
+{
+    "name": "DriveLang",
+    "scopeName": "source.drive",
+    "fileTypes": [
+        "drive"
+    ],
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#declarations"
+        },
+        {
+            "include": "#keywords"
+        },
+        {
+            "include": "#operators"
+        },
+        {
+            "include": "#ranges"
+        },
+        {
+            "include": "#numbers"
+        },
+        {
+            "include": "#builtins"
+        },
+        {
+            "include": "#mathFunctions"
+        },
+        {
+            "include": "#nativeOperations"
+        },
+        {
+            "include": "#specialIdentifiers"
+        },
+        {
+            "include": "#functionCalls"
+        },
+        {
+            "include": "#variables"
+        },
+        {
+            "include": "#punctuation"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.double-slash.drive",
+                    "match": "//.*$"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.drive",
+                    "begin": "\"",
+                    "end": "\"",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.drive",
+                            "match": "\\\\(?:\\\\|\"|n|r|t)"
+                        }
+                    ]
+                }
+            ]
+        },
+        "declarations": {
+            "patterns": [
+                {
+                    "name": "meta.declaration.filter.drive",
+                    "begin": "\\b(filter)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\()",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.declaration.filter.drive"
+                        },
+                        "2": {
+                            "name": "entity.name.function.filter.drive"
+                        },
+                        "3": {
+                            "name": "punctuation.definition.parameters.begin.drive"
+                        }
+                    },
+                    "end": "(\\))",
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.parameters.end.drive"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comments"
+                        },
+                        {
+                            "name": "variable.parameter.filter.drive",
+                            "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+                        }
+                    ]
+                },
+                {
+                    "name": "meta.declaration.audio-filter.drive",
+                    "begin": "\\b(af)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(\\()",
+                    "beginCaptures": {
+                        "1": {
+                            "name": "keyword.declaration.af.drive"
+                        },
+                        "2": {
+                            "name": "entity.name.function.af.drive"
+                        },
+                        "3": {
+                            "name": "punctuation.definition.parameters.begin.drive"
+                        }
+                    },
+                    "end": "(\\))",
+                    "endCaptures": {
+                        "1": {
+                            "name": "punctuation.definition.parameters.end.drive"
+                        }
+                    },
+                    "patterns": [
+                        {
+                            "include": "#comments"
+                        },
+                        {
+                            "name": "variable.parameter.af.drive",
+                            "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+                        }
+                    ]
+                },
+                {
+                    "name": "meta.declaration.kernel.drive",
+                    "match": "\\b(kernel)\\s+([A-Za-z_][A-Za-z0-9_]*)\\b",
+                    "captures": {
+                        "1": {
+                            "name": "keyword.declaration.kernel.drive"
+                        },
+                        "2": {
+                            "name": "entity.name.constant.kernel.drive"
+                        }
+                    }
+                }
+            ]
+        },
+        "keywords": {
+            "patterns": [
+                {
+                    "name": "keyword.control.import.drive",
+                    "match": "\\bimport\\b"
+                },
+                {
+                    "name": "keyword.declaration.drive",
+                    "match": "\\b(filter|af|kernel|let)\\b"
+                },
+                {
+                    "name": "keyword.control.conditional.drive",
+                    "match": "\\b(if|elif|else)\\b"
+                },
+                {
+                    "name": "keyword.control.loop.drive",
+                    "match": "\\b(for|in)\\b"
+                },
+                {
+                    "name": "keyword.operator.logical.drive",
+                    "match": "\\b(and|or|not)\\b"
+                }
+            ]
+        },
+        "operators": {
+            "patterns": [
+                {
+                    "name": "keyword.operator.pipeline.drive",
+                    "match": "->"
+                },
+                {
+                    "name": "keyword.operator.comparison.drive",
+                    "match": "==|!=|>=|<=|>|<"
+                },
+                {
+                    "name": "keyword.operator.assignment.drive",
+                    "match": "="
+                },
+                {
+                    "name": "keyword.operator.arithmetic.drive",
+                    "match": "[+*/%-]"
+                },
+                {
+                    "name": "keyword.operator.range.drive",
+                    "match": "\\.\\."
+                }
+            ]
+        },
+        "ranges": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.range.drive",
+                    "match": "(?<![\\w.])-?(?:\\d+(?:\\.\\d+)?)\\.\\.(?:\\d+(?:\\.\\d+)?)(?:\\.\\.(?:\\d+(?:\\.\\d+)?))?"
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.float.drive",
+                    "match": "(?<![\\w.])-?(?:\\d+\\.\\d*|\\.\\d+)(?![\\w.])"
+                },
+                {
+                    "name": "constant.numeric.integer.drive",
+                    "match": "(?<![\\w.])-?\\d+(?![\\w.])"
+                }
+            ]
+        },
+        "builtins": {
+            "patterns": [
+                {
+                    "name": "support.function.image.drive",
+                    "match": "\\b(frame|blank|text)\\b(?=\\s*\\()"
+                },
+                {
+                    "name": "support.function.audio.drive",
+                    "match": "\\b(track|silence)\\b(?=\\s*\\()"
+                },
+                {
+                    "name": "support.function.io.drive",
+                    "match": "\\b(export|print)\\b(?=\\s*\\()"
+                }
+            ]
+        },
+        "mathFunctions": {
+            "patterns": [
+                {
+                    "name": "support.function.math.single.drive",
+                    "match": "\\b(abs|sqrt|sin|cos|tan|asin|acos|atan|exp|log|log10|floor|ceil|round)\\b(?=\\s*\\()"
+                },
+                {
+                    "name": "support.function.math.multi.drive",
+                    "match": "\\b(min|max|pow|clamp|lerp|smooth_lerp)\\b(?=\\s*\\()"
+                }
+            ]
+        },
+        "nativeOperations": {
+            "patterns": [
+                {
+                    "name": "support.function.pipeline.drive",
+                    "match": "\\b(resize|crop|blend|blur)\\b(?=\\s*\\()"
+                }
+            ]
+        },
+        "specialIdentifiers": {
+            "patterns": [
+                {
+                    "name": "variable.language.pixel.channel.drive",
+                    "match": "\\b(r|g|b|a)\\b"
+                },
+                {
+                    "name": "variable.language.pixel.coordinate.drive",
+                    "match": "\\b(x|y)\\b"
+                },
+                {
+                    "name": "variable.language.pixel.dimension.drive",
+                    "match": "\\b(width|height)\\b"
+                },
+                {
+                    "name": "variable.language.audio.channel.drive",
+                    "match": "\\b(l|r)\\b"
+                },
+                {
+                    "name": "variable.language.audio.time.drive",
+                    "match": "\\b(time)\\b"
+                },
+                {
+                    "name": "variable.language.audio.sample-rate.drive",
+                    "match": "\\b(sr)\\b"
+                }
+            ]
+        },
+        "functionCalls": {
+            "patterns": [
+                {
+                    "name": "entity.name.function.call.drive",
+                    "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\s*\\()"
+                }
+            ]
+        },
+        "variables": {
+            "patterns": [
+                {
+                    "name": "variable.other.drive",
+                    "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b"
+                }
+            ]
+        },
+        "punctuation": {
+            "patterns": [
+                {
+                    "name": "punctuation.section.block.begin.drive",
+                    "match": "\\{"
+                },
+                {
+                    "name": "punctuation.section.block.end.drive",
+                    "match": "\\}"
+                },
+                {
+                    "name": "punctuation.definition.array.begin.drive",
+                    "match": "\\["
+                },
+                {
+                    "name": "punctuation.definition.array.end.drive",
+                    "match": "\\]"
+                },
+                {
+                    "name": "punctuation.definition.parameters.begin.drive",
+                    "match": "\\("
+                },
+                {
+                    "name": "punctuation.definition.parameters.end.drive",
+                    "match": "\\)"
+                },
+                {
+                    "name": "punctuation.separator.drive",
+                    "match": ",|;"
+                },
+                {
+                    "name": "punctuation.accessor.mask.drive",
+                    "match": "\\[|\\]"
+                }
+            ]
+        }
+    }
+}
