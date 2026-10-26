@@ -3,6 +3,6 @@ import std::color;
 import std::advanced;
 
 
-img = frame("input_image.jpg") -> crop(0,0,2500,3000);
+img = frame("examples/bw_high_contrast.png") -> crop(0, 0, 1249, 700);
 
-export(imp,"Outputs/img.png");
+export(img, "Outputs/img.png");

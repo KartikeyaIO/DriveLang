@@ -1,434 +1,197 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Learn DriveLang</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        drive: {
-                            bg: '#020617',
-                            card: '#0f172a',
-                            border: '#1e293b',
-                            accent: '#22d3ee',
-                            text: '#cbd5e1',
-                            muted: '#94a3b8'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #020617;
-            color: #cbd5e1;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        /* FIXED: Code blocks now scroll horizontally on mobile and preserve strict indentation */
-        .code-block {
-            background-color: #000000;
-            border: 1px solid #1e293b;
-            border-radius: 0.75rem;
-            padding: 1.25rem;
-            overflow-x: auto;
-            /* Allows horizontal scrolling instead of wrapping */
-            white-space: pre;
-            /* Enforces strict indentation */
-            color: #e2e8f0;
-            font-size: 0.875rem;
-            line-height: 1.7;
-            font-family: 'JetBrains Mono', monospace;
-            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.2);
-            margin-bottom: 1rem;
-        }
-
-        @media (min-width: 768px) {
-            .nav-btn.active {
-                background-color: rgba(30, 41, 59, 0.5);
-                color: #22d3ee;
-                border-left: 3px solid #22d3ee;
-            }
-
-            .nav-btn {
-                border-left: 3px solid transparent;
-            }
-        }
-
-        @media (max-width: 767px) {
-            .nav-btn.active {
-                background-color: rgba(34, 211, 238, 0.1);
-                color: #22d3ee;
-                border-bottom: 2px solid #22d3ee;
-            }
-
-            .nav-btn {
-                border-bottom: 2px solid transparent;
-            }
-        }
-
-        .keyword {
-            color: #c084fc;
-        }
-
-        .string {
-            color: #6ee7b7;
-        }
-
-        .comment {
-            color: #64748b;
-            font-style: italic;
-        }
-
-        .function {
-            color: #38bdf8;
-        }
-
-        .operator {
-            color: #f472b6;
-        }
-    </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020"><meta name="description" content="A practical, detailed field guide to DriveLang: image and audio pipelines, functions, cards, folders, kernels, and the standard library.">
+<title>DriveLang Field Guide</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#111a2c;--panel2:#172238;--line:#293650;--text:#e7edf7;--muted:#a8b5c9;--soft:#7e8da5;--cyan:#6ee7e0;--amber:#ffcf82;--green:#a5e6b0;--shadow:0 18px 50px #0005;--top:66px}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:85px}body{margin:0;background:radial-gradient(ellipse at 50% -20%,#193050 0,transparent 42%),var(--bg);color:var(--text);font:16px/1.7 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}button,input{font:inherit}.skip{position:absolute;left:-999px;top:8px;background:var(--cyan);color:#07101c;padding:8px 12px;border-radius:8px;z-index:100}.skip:focus{left:8px}
+.top{position:sticky;top:0;z-index:40;height:var(--top);display:flex;align-items:center;gap:12px;padding:0 clamp(12px,3vw,38px);background:#0b1020ed;border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}.brand{display:flex;align-items:center;gap:10px;color:var(--text);font-weight:800;white-space:nowrap}.mark{display:grid;place-items:center;width:35px;height:35px;border-radius:11px;background:linear-gradient(140deg,#67e8db,#648dff);color:#09111c;font-size:19px}.brand small{display:block;color:var(--soft);font-size:10px;letter-spacing:.13em;text-transform:uppercase}.actions{margin-left:auto;display:flex;align-items:center;gap:9px}.search{position:relative;width:min(31vw,310px)}.search input{width:100%;padding:9px 12px 9px 34px;border:1px solid var(--line);border-radius:10px;background:#10192a;color:var(--text);outline:none}.search input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px #6ee7e022}.glass{position:absolute;left:12px;top:4px;color:var(--soft)}.repo,.menu{border:1px solid var(--line);border-radius:10px;padding:8px 11px;color:var(--muted);font-size:13px;background:transparent}.menu{display:none}
+.layout{max-width:1440px;margin:auto;display:grid;grid-template-columns:260px minmax(0,1fr);min-height:calc(100vh - var(--top))}.side{position:sticky;top:var(--top);height:calc(100vh - var(--top));overflow:auto;border-right:1px solid var(--line);padding:25px 14px 34px 19px;background:#0d1422a8}.side-label{padding:0 10px;color:var(--soft);font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;margin:16px 0 8px}.nav{display:grid;gap:3px}.nav a{display:flex;gap:9px;padding:8px 9px;color:var(--muted);border-radius:8px;font-size:13px;line-height:1.35}.nav a:hover,.nav a.active{background:#17263a;color:var(--cyan);text-decoration:none}.n{width:20px;color:#70829d;font:11px ui-monospace,monospace}.main{min-width:0;padding:clamp(18px,4vw,54px) clamp(15px,5vw,68px) 80px}
+.hero{position:relative;overflow:hidden;padding:clamp(24px,5vw,54px);border:1px solid #32425c;border-radius:23px;background:linear-gradient(125deg,#172942,#111b2d 56%,#1a2438);box-shadow:var(--shadow)}.eyebrow{color:var(--cyan);font-size:11px;text-transform:uppercase;letter-spacing:.15em;font-weight:800}.hero h1{max-width:800px;font-size:clamp(38px,6vw,72px);line-height:1.04;letter-spacing:-.065em;margin:18px 0;color:#f6f8fc}.hero h1 span{color:var(--cyan)}.hero p{max-width:740px;color:#c1cde0;font-size:clamp(16px,2vw,19px);margin:0}.buttons{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}.btn{display:inline-flex;border-radius:10px;padding:10px 15px;background:var(--cyan);color:#07131c;font-size:13px;font-weight:800}.btn.alt{background:#202e43;color:var(--text);border:1px solid #354660}.facts,.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:15px}.fact,.card{padding:15px;border:1px solid var(--line);background:linear-gradient(145deg,#121d30,#0f1726);border-radius:13px}.fact strong{display:block;font-size:13px}.fact span{color:var(--soft);font-size:11px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));margin:16px 0}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.card h3{font-size:16px;margin:0 0 6px}.card p{margin:0;color:var(--muted);font-size:14px}.tag{display:block;color:var(--cyan);font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;margin-bottom:7px}
+.section{margin-top:53px;scroll-margin-top:86px}.head{display:flex;gap:13px;align-items:flex-start;margin-bottom:19px}.ix{display:grid;place-items:center;flex:none;width:33px;height:33px;border:1px solid #355568;border-radius:10px;color:var(--cyan);background:#10232f;font:12px ui-monospace,monospace}.section h2{font-size:clamp(25px,3.5vw,37px);line-height:1.17;letter-spacing:-.045em;margin:0 0 7px}.section h3{font-size:19px;margin:27px 0 9px}.lead,.prose{max-width:890px;color:var(--muted);margin:0}.prose{margin:12px 0}.callout{border-left:3px solid var(--cyan);padding:12px 15px;margin:17px 0;border-radius:0 9px 9px 0;background:#10212c;color:#c8d8e1}.warn{border-color:var(--amber);background:#272216}.callout strong{color:var(--text)}code:not(pre code){font:.9em ui-monospace,SFMono-Regular,Consolas,monospace;color:#9be6dc;background:#162335;padding:2px 5px;border-radius:5px;overflow-wrap:anywhere}.code{margin:14px 0 18px;border:1px solid #29354c;border-radius:12px;background:#080c16;overflow:hidden}.codehead{display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-bottom:1px solid #202b3d;color:#8090a9;font:10px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase}.copy{background:#131d2b;border:1px solid #2b3a51;border-radius:7px;padding:4px 8px;color:#aebbd0;font-size:11px;cursor:pointer}pre{margin:0;padding:16px 18px;overflow:auto;white-space:pre;tab-size:4;-webkit-overflow-scrolling:touch;color:#dbe5f2;font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}.kw{color:#c4a4ff}.str{color:#a5e6b0}.cm{color:#73839b;font-style:italic}.fn{color:#83c5ff}.op{color:#f2a5c4}.tablewrap{overflow:auto;margin:14px 0;border:1px solid var(--line);border-radius:11px;-webkit-overflow-scrolling:touch}table{width:100%;border-collapse:collapse;min-width:550px;background:#101827}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #26334a;vertical-align:top;font-size:13px}th{background:#172338;color:#dce6f4;font-size:10px;text-transform:uppercase;letter-spacing:.07em}td{color:var(--muted)}td:first-child{color:#9ee6dc;font:12px ui-monospace,monospace}tr:last-child td{border-bottom:0}.pill{display:inline-block;margin:3px;padding:4px 8px;border:1px solid #2a3a50;border-radius:99px;background:#121f30;color:#b7c9de;font:11px ui-monospace,monospace}.hidden-search{display:none!important}.noresults{display:none;padding:25px;color:var(--muted);text-align:center}.back{position:fixed;right:18px;bottom:17px;border:1px solid #486274;background:#122333;color:var(--cyan);border-radius:11px;padding:9px 12px;box-shadow:var(--shadow);opacity:0;pointer-events:none}.back.show{opacity:1;pointer-events:auto}.footer{margin-top:65px;border-top:1px solid var(--line);padding-top:18px;color:var(--soft);font-size:12px}
+@media(max-width:980px){.layout{grid-template-columns:220px minmax(0,1fr)}.side{padding-left:10px;padding-right:8px}.grid.three{grid-template-columns:repeat(2,minmax(0,1fr))}.repo{display:none}}
+@media(max-width:720px){:root{--top:59px}html{scroll-padding-top:74px}.top{height:var(--top);padding:0 11px;gap:9px}.brand{font-size:14px}.mark{width:32px;height:32px}.brand small{font-size:9px}.menu{display:block}.search{width:min(42vw,230px)}.search input{padding:8px 8px 8px 30px;font-size:13px}.layout{display:block}.side{position:fixed;z-index:35;top:var(--top);left:0;bottom:0;width:min(84vw,310px);height:auto;background:#0d1422;box-shadow:var(--shadow);transform:translateX(-105%);transition:transform .22s ease;padding:18px 15px 30px}.nav-open .side{transform:translateX(0)}.nav-open:after{content:"";position:fixed;z-index:30;inset:var(--top) 0 0;background:#030712aa}.main{padding:17px 14px 60px}.hero{padding:25px 19px;border-radius:17px}.facts{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.section{margin-top:42px}.grid,.grid.three{grid-template-columns:1fr}.head{gap:9px}.ix{width:30px;height:30px}.section h2{font-size:27px}.card{padding:15px}pre{font-size:12px;padding:13px}.back{right:12px;bottom:12px}}
+@media(max-width:380px){.brand small{display:none}.search{width:38vw}.hero .btn{width:100%;justify-content:center}.facts{font-size:12px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition:none!important}}
+</style>
 </head>
+<body>
+<a class="skip" href="#content">Skip to guide</a>
+<header class="top" id="top"><button class="menu" id="menu" aria-label="Open navigation" aria-expanded="false">☰</button><a class="brand" href="#top"><span class="mark">D</span><span>DriveLang<small>Field Guide</small></span></a><div class="actions"><label class="search"><span class="glass">⌕</span><input id="search" type="search" placeholder="Search the guide…" aria-label="Search guide"></label><a class="repo" href="https://github.com/KartikeyaIO/DriveLang" target="_blank" rel="noopener">Repository ↗</a></div></header>
+<div class="layout"><aside class="side" aria-label="Guide navigation"><div class="side-label">Navigate the guide</div><nav class="nav" id="nav">
+<a href="#start"><span class="n">00</span>Welcome</a><a href="#run"><span class="n">01</span>Run a script</a><a href="#values"><span class="n">02</span>Syntax & values</a><a href="#expressions"><span class="n">03</span>Expressions & math</a><a href="#media"><span class="n">04</span>Media I/O</a><a href="#filters"><span class="n">05</span>Image filters</a><a href="#functions"><span class="n">06</span>Functions & cards</a><a href="#pipeline"><span class="n">07</span>Pipelines</a><a href="#flow"><span class="n">08</span>Conditions & loops</a><a href="#masks"><span class="n">09</span>Masks</a><a href="#kernels"><span class="n">10</span>Kernels</a><a href="#audio"><span class="n">11</span>Audio</a><a href="#folders"><span class="n">12</span>Folder batches</a><a href="#stdlib"><span class="n">13</span>Standard library</a><a href="#tips"><span class="n">14</span>Tips & limits</a>
+</nav><p class="prose" style="font-size:11px;margin:23px 10px">Current language reference · self-contained page · works offline</p></aside>
+<main class="main" id="content">
+<section class="hero" id="start" data-search="welcome guide drivelang media image audio rust pipeline"><div class="eyebrow">A practical handbook for the current language</div><h1>Make media move.<br><span>Write it in DriveLang.</span></h1><p>DriveLang is a small scripting language for image editing, audio processing, and repeatable media workflows. Start with one runnable file, then build toward reusable filters, card generators, batch exports, and sound design.</p><div class="buttons"><a class="btn" href="#run">Start with a script ↓</a><a class="btn alt" href="#functions">Make a card generator</a></div></section>
+<div class="facts"><div class="fact"><strong>Script first</strong><span>No entry-point boilerplate</span></div><div class="fact"><strong>Image + audio</strong><span>Frames, tracks, folders</span></div><div class="fact"><strong>Reusable</strong><span>Filters, functions, imports</span></div><div class="fact"><strong>Portable</strong><span>Responsive and offline</span></div></div><div class="noresults" id="noresults">No matching sections. Try “filter”, “audio”, or “card”.</div>
+<section class="section" id="run" data-search="run install cli command new project timing quick start"><div class="head"><span class="ix">01</span><div><h2>Run a script</h2><p class="lead">A DriveLang program is a .drive file. Run from a directory where its relative media paths and output folders exist.</p></div></div><div class="grid"><article class="card"><span class="tag">Execute</span><h3>Use the run command</h3><p>Drive reads and evaluates statements from top to bottom.</p></article><article class="card"><span class="tag">Scaffold</span><h3>Start a project</h3><p><code>drive new poster</code> creates main.drive, filters.drive, assets/, and output/.</p></article></div><div class="code"><div class="codehead">Terminal · from the repository root</div><pre><code>drive run examples/hello.drive
+drive run examples/intro.drive
 
-<body class="min-h-screen flex flex-col antialiased selection:bg-cyan-500/30">
+<span class="cm"># Create a starter project; without a file, run uses main.drive</span>
+drive new poster
+cd poster
+drive run
 
-    <header
-        class="sticky top-0 z-50 bg-drive-bg/80 backdrop-blur-lg border-b border-drive-border px-4 md:px-8 py-3 md:py-4 flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-            <div
-                class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-cyan-500/20">
-                D</div>
-            <h1 class="text-lg md:text-xl font-bold tracking-tight text-white">Learn DriveLang</h1>
-        </div>
-        <a href="https://github.com/KartikeyaIO/DriveLang" target="_blank"
-            class="flex items-center space-x-2 px-3 py-1.5 md:px-4 md:py-2 bg-white text-black text-xs md:text-sm font-semibold rounded-lg hover:bg-cyan-50 transition-all shadow-sm hover:shadow-cyan-500/20">
-            <svg class="w-4 h-4 md:w-5 md:h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path fill-rule="evenodd"
-                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                    clip-rule="evenodd" />
-            </svg>
-            <span class="hidden sm:inline">View Repository</span>
-            <span class="sm:hidden">GitHub</span>
-        </a>
-    </header>
+<span class="cm"># Include elapsed time in the CLI output</span>
+drive --time run main.drive</code></pre></div><div class="callout"><strong>Paths resolve from your working directory.</strong> The examples load the bundled image and export to Outputs/. Make the output folder before export; DriveLang does not create missing parent directories.</div></section>
+<section class="section" id="values" data-search="syntax values variables imports comments types frame track folder strings let assignment"><div class="head"><span class="ix">02</span><div><h2>Syntax & values</h2><p class="lead">The source file is the program. There is no required main function or class declaration.</p></div></div><div class="code"><div class="codehead">A small script</div><pre><code><span class="cm">// Comments start with two slashes.</span>
+<span class="kw">import</span> <span class="str">"filters.drive"</span>;
 
-    <div class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
-        <aside
-            class="w-full md:w-64 md:border-r border-b md:border-b-0 border-drive-border shrink-0 md:py-6 md:pr-6 sticky top-[56px] md:top-[73px] bg-drive-bg/95 backdrop-blur z-40 md:h-[calc(100vh-73px)] md:overflow-y-auto">
-            <h2 class="hidden md:block text-xs font-bold text-drive-muted uppercase tracking-wider mb-3 px-4">Language
-                Features</h2>
-
-            <nav class="flex flex-row md:flex-col overflow-x-auto no-scrollbar px-2 py-2 md:p-0 md:space-y-1 snap-x"
-                id="nav-menu">
-                <button onclick="showSection('basics')"
-                    class="nav-btn active flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Program
-                    Structure</button>
-                <button onclick="showSection('filters')"
-                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Filter
-                    & Let</button>
-                <button onclick="showSection('pipeline')"
-                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Pipeline
-                    (->)</button>
-                <button onclick="showSection('masks')"
-                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Spatial
-                    Masks</button>
-                <button onclick="showSection('audio')"
-                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Audio
-                    Filters</button>
-                <button onclick="showSection('kernels')"
-                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Kernels</button>
-                <button onclick="showSection('prelude')"
-                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Prelude</button>
-                <button onclick="showSection('control')"
-                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Control
-                    Flow</button>
-                <button onclick="showSection('builtins')"
-                    class="nav-btn flex-shrink-0 snap-start text-left px-4 py-2 text-sm font-medium text-drive-muted hover:text-white rounded-lg md:rounded-l-none md:rounded-r-lg transition-colors">Math
-                    Built-ins</button>
-            </nav>
-        </aside>
-
-        <main class="flex-1 px-4 py-6 md:pl-10 md:pr-6 w-full overflow-hidden">
-
-            <div id="section-basics" class="content-section w-full animate-fade-in">
-                <!-- FIXED: Solid high-contrast text instead of unreadable gradient -->
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Program Structure & Types</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">A Drive script is a flat sequence
-                    of top-level statements executed from top to bottom[cite: 1]. There are no classes and no entry
-                    point boilerplate—the file itself is the program[cite: 1].</p>
-
-                <h3 class="text-lg md:text-xl font-semibold text-white mb-3">Variables & Types</h3>
-                <p class="text-sm md:text-base text-drive-muted mb-4 leading-relaxed">Variables are assigned with
-                    <code>=</code> and live in the global script scope[cite: 1]. Types are inferred at runtime[cite: 1].
-                    The four primitive types are <strong>Number</strong>, <strong>String</strong>,
-                    <strong>Frame</strong> (images), and <strong>Track</strong> (audio)[cite: 1].
-                </p>
-
-                <!-- FIXED: Using proper <pre> formatting so the code retains its layout perfectly -->
-                <pre class="code-block"><span class="comment">// 1. Imports execute the file in the current scope[cite: 1]</span>
-<span class="keyword">import</span> <span class="string">"my_filters.drive"</span>;
-
-<span class="comment">// 2. Variable Assignment[cite: 1]</span>
-x <span class="operator">=</span> 100;
-name <span class="operator">=</span> <span class="string">"Drive"</span>;
-
-<span class="comment">// 3. Loading Media (Returns Frame and Track types)[cite: 1]</span>
-img <span class="operator">=</span> <span class="function">frame</span>(<span class="string">"photo.png"</span>);
-music <span class="operator">=</span> <span class="function">track</span>(<span class="string">"audio.wav"</span>);
-
-<span class="comment">// 4. Exporting & Printing[cite: 1]</span>
-<span class="function">print</span>(<span class="string">"Processing file {} at scale {}"</span>, name, x);
-<span class="function">export</span>(img, <span class="string">"output.png"</span>);</pre>
-            </div>
-
-            <div id="section-filters" class="content-section hidden w-full">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Filter Creation & The `let` Keyword</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">A <code>filter</code> defines a
-                    per-pixel operation[cite: 1]. The body assigns new values to the output channels <code>r</code>,
-                    <code>g</code>, <code>b</code>, <code>a</code>[cite: 1]. Any channel not assigned passes through
-                    unchanged[cite: 1].
-                </p>
-
-                <h3 class="text-lg md:text-xl font-semibold text-white mb-3">Parameters and Identifiers</h3>
-                <p class="text-sm md:text-base text-drive-muted mb-4 leading-relaxed">Inside a filter, you automatically
-                    have access to <code>r, g, b, a</code> (current pixel values 0-255), <code>x, y</code>
-                    (coordinates), and <code>width, height</code> (frame dimensions)[cite: 1].</p>
-
-                <pre class="code-block"><span class="keyword">filter</span> <span class="function">tint_and_brightness</span>(factor, tint_r) {
-  <span class="comment">// 'let' declares an intermediate local value scoped to the enclosing block[cite: 1].</span>
-  <span class="keyword">let</span> luma <span class="operator">=</span> 0.299 * r <span class="operator">+</span> 0.587 * g <span class="operator">+</span> 0.114 * b;
-
-  <span class="comment">// Mutate the outgoing pixel channels[cite: 1].</span>
-  r <span class="operator">=</span> <span class="function">clamp</span>((luma * factor) <span class="operator">+</span> tint_r, 0, 255);
-  g <span class="operator">=</span> <span class="function">clamp</span>(luma * factor, 0, 255);
-  b <span class="operator">=</span> <span class="function">clamp</span>(luma * factor, 0, 255);
-}</pre>
-            </div>
-
-            <div id="section-pipeline" class="content-section hidden w-full">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Filter Application (The Pipeline)</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">The pipeline operator
-                    <code>-&gt;</code> pipes a Frame or Track through a sequence of operations left to right[cite: 1].
-                    The base value is mutated in place through each stage[cite: 1].
-                </p>
-
-                <pre
-                    class="code-block"><span class="keyword">filter</span> <span class="function">invert</span>() {
-  r <span class="operator">=</span> 255 <span class="operator">-</span> r;
-  g <span class="operator">=</span> 255 <span class="operator">-</span> g;
-  b <span class="operator">=</span> 255 <span class="operator">-</span> b;
+scale = 1.25;
+name = <span class="str">"DriveLang"</span>;
+img = <span class="fn">frame</span>(<span class="str">"assets/photo.png"</span>);
+result = img -&gt; <span class="fn">resize</span>(640, 480) -&gt; <span class="fn">brighten</span>(24 * scale);
+<span class="fn">print</span>(<span class="str">"Rendered {} at scale {}"</span>, name, scale);
+<span class="fn">export</span>(result, <span class="str">"output/result.png"</span>);</code></pre></div><div class="tablewrap"><table><thead><tr><th>Type</th><th>Meaning</th><th>Create it with</th></tr></thead><tbody><tr><td>Number</td><td>64-bit floating point value.</td><td>12, 0.25, sin(angle)</td></tr><tr><td>String</td><td>Text, filenames, and f-strings.</td><td>"hello", f"card_{i:02}.png"</td></tr><tr><td>Frame</td><td>RGBA image bitmap.</td><td>frame(), blank(), text(), folder[index]</td></tr><tr><td>Track</td><td>Multichannel audio samples.</td><td>track(), silence(), merge(), concat()</td></tr><tr><td>Folder</td><td>Sorted image file collection.</td><td>folder(path)</td></tr></tbody></table></div><p class="prose">Use <code>=</code> to assign variables. Use <code>let name = value;</code> for a local binding in functions, filters, and audio filters. Strings support escapes <code>\n</code>, <code>\t</code>, <code>\r</code>, <code>\\</code>, <code>\"</code>, and <code>\0</code>. Import a file with <code>import \"filters.drive\";</code> or a standard module with <code>import std::color;</code>. Imports share the current scope and each file executes once. Import aliases are not supported.</p></section>
+<section class="section" id="expressions" data-search="expressions operators math ranges formatted strings fstring escapes comparisons logic"><div class="head"><span class="ix">03</span><div><h2>Expressions & math</h2><p class="lead">Comparisons and logical operations produce numbers: 1 is true, 0 is false. Conditions treat any nonzero number as true.</p></div></div><div class="grid"><article class="card"><h3>Operators</h3><p>Arithmetic: <code>+ - * /</code>. Comparisons: <code>== != &gt; &gt;= &lt; &lt;=</code>. Logic: <code>and or not</code>. Use <code>mod(a,b)</code> instead of a percent operator.</p></article><article class="card"><h3>Ranges</h3><p><code>start..end</code> includes start, excludes end. <code>0..10..2</code> steps by two. Ranges power loops and masks.</p></article></div><h3>Built-in math</h3><p class="prose"><code>abs</code>, <code>sin</code>, <code>cos</code>, <code>tan</code>, <code>asin</code>, <code>acos</code>, <code>atan</code>, <code>atan2</code>, <code>sqrt</code>, <code>exp</code>, <code>log</code>, <code>log10</code>, <code>floor</code>, <code>ceil</code>, <code>round</code>, <code>min</code>, <code>max</code>, <code>pow</code>, <code>mod</code>, <code>clamp</code>, <code>lerp</code>, and <code>smooth_lerp</code>. Trigonometric functions use radians. Division by zero and mod by zero return zero.</p><div class="code"><div class="codehead">F-strings, padding, precision, and literal braces</div><pre><code>for i in 0..3 {
+    path = f<span class="str">"output/card_{i:04}.png"</span>;
+    <span class="fn">print</span>(f<span class="str">"path={path}; ratio={(i + 1) / 3.0:.2f}; braces={{ok}}\n"</span>);
 }
-
-img <span class="operator">=</span> <span class="function">frame</span>(<span class="string">"photo.png"</span>);
-
-<span class="comment">// Apply a chain of filters[cite: 1]. </span>
-<span class="comment">// Native filters like resize() and blur() do not require a declaration[cite: 1].</span>
-result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span class="function">resize</span>(800, 600) <span class="operator">-&gt;</span> <span class="function">invert</span>() <span class="operator">-&gt;</span> <span class="function">blur</span>(5);</pre>
-            </div>
-
-            <div id="section-masks" class="content-section hidden w-full">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Spatial Masks</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">A filter stage can be restricted
-                    to a pixel region[cite: 1]. Pixels outside the mask are left unchanged[cite: 1]. Ranges follow the
-                    <code>start..end</code> syntax[cite: 1].
-                </p>
-
-                <pre
-                    class="code-block"><span class="keyword">filter</span> <span class="function">red_boost</span>() {
-  r <span class="operator">=</span> <span class="function">clamp</span>(r <span class="operator">+</span> 100, 0, 255);
+distance = <span class="fn">sqrt</span>(<span class="fn">pow</span>(3, 2) + <span class="fn">pow</span>(4, 2));</code></pre></div><p class="prose">Use <code>:04</code> for zero-padded whole-number formatting and <code>:.2f</code> for two decimal places. F-strings also accept expressions between braces.</p></section>
+<section class="section" id="media" data-search="media frame track blank text export loading audio image file io"><div class="head"><span class="ix">04</span><div><h2>Media I/O</h2><p class="lead">Create Frames and Tracks from files or constructors, transform them, then export to a path.</p></div></div><div class="tablewrap"><table><thead><tr><th>Call</th><th>Result</th></tr></thead><tbody><tr><td>frame(path)</td><td>Loads an image as RGBA. Common formats include PNG, JPEG, BMP, WebP and TIFF.</td></tr><tr><td>blank(w,h)</td><td>Creates a black RGBA frame.</td></tr><tr><td>text(s,font,size,r,g,b)</td><td>Rasterizes text using the specified TTF font and RGB color values.</td></tr><tr><td>track(path)</td><td>Decodes audio into a Track. Current decoder supports formats including WAV, MP3, FLAC, and OGG.</td></tr><tr><td>silence(seconds,rate,channels)</td><td>Creates silence in blocks of 1024 samples.</td></tr><tr><td>print(...)</td><td>Writes text to stdout. Braces in format strings consume values.</td></tr><tr><td>export(frame,path)</td><td>Writes image data as PNG, regardless of path suffix.</td></tr><tr><td>flatten(r,g,b)</td><td>Available as a core filter; composite transparency over your chosen RGB color and set alpha opaque before upload.</td></tr><tr><td>export(track,path)</td><td>Lowercase .mp3 suffix writes MP3; other suffixes write 32-bit float WAV.</td></tr><tr><td>export_mp3(track,path,kbps)</td><td>MP3 bitrate: 128, 160, 192, 256, 320; unsupported values use 192.</td></tr></tbody></table></div><div class="callout warn"><strong>Make destination folders first.</strong> Export does not create parent directories. Audio slicing and generated silence align to blocks, not necessarily exact requested sample boundaries.</div><h3>Frame metadata</h3><p class="prose">Read <code>image.width</code>, <code>image.height</code>, <code>image.name</code>, or use the matching methods <code>width()</code>, <code>height()</code>, <code>name()</code>. A generated frame may have an empty name.</p><div class="code"><div class="codehead">Text on a simple canvas</div><pre><code>canvas = <span class="fn">blank</span>(960, 540);
+title = <span class="fn">text</span>(<span class="str">"A small story"</span>, <span class="str">"assets/Georgia.ttf"</span>, 48, 235, 242, 255);
+card = canvas -&gt; <span class="fn">blend</span>(48, 70, title, 1.0);
+<span class="fn">export</span>(card, <span class="str">"output/title.png"</span>);</code></pre></div></section>
+<section class="section" id="filters" data-search="image filter per pixel shader channel coordinate width height parameters conditionals loops"><div class="head"><span class="ix">05</span><div><h2>Image filters</h2><p class="lead">A filter is a reusable per-pixel transformation. Change the channels you need and let the rest pass through.</p></div></div><div class="code"><div class="codehead">A shadow lift</div><pre><code><span class="kw">filter</span> lift_shadows(amount, cutoff) {
+    <span class="kw">let</span> luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    <span class="kw">if</span> luma &lt; cutoff {
+        <span class="kw">let</span> lift = amount * (1 - luma / cutoff);
+        r = <span class="fn">clamp</span>(r + lift, 0, 255);
+        g = <span class="fn">clamp</span>(g + lift, 0, 255);
+        b = <span class="fn">clamp</span>(b + lift, 0, 255);
+    }
 }
-
-img <span class="operator">=</span> <span class="function">frame</span>(<span class="string">"input.png"</span>);
-
-<span class="comment">// Only apply red_boost to a 300x250 pixel region starting at (100, 50)[cite: 1].</span>
-result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span class="function">red_boost</span>() [100..400, 50..300];</pre>
-            </div>
-
-            <div id="section-audio" class="content-section hidden w-full">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Audio Filters (af)</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">An <code>af</code> is a per-sample
-                    operation on a Track[cite: 1]. The body assigns new values to <code>l</code> (left channel) and
-                    <code>r</code> (right channel)[cite: 1].
-                </p>
-
-                <h3 class="text-lg md:text-xl font-semibold text-white mb-3">Audio Identifiers</h3>
-                <p class="text-sm md:text-base text-drive-muted mb-4 leading-relaxed">Inside an audio filter, you have
-                    access to <code>l</code>, <code>r</code>, <code>time</code> (Time of this sample in seconds), and
-                    <code>sr</code> (Sample rate)[cite: 1].
-                </p>
-
-                <pre class="code-block"><span class="keyword">af</span> <span class="function">auto_pan</span>(speed, master_gain) {
-  <span class="comment">// Calculate an oscillating pan value using 'time'[cite: 1]</span>
-  <span class="keyword">let</span> pan <span class="operator">=</span> <span class="function">sin</span>(time * speed);
-
-  <span class="comment">// Apply pan and gain to the left and right channels[cite: 1]</span>
-  l <span class="operator">=</span> <span class="function">clamp</span>(l * (1.0 <span class="operator">-</span> pan) * master_gain, <span class="operator">-</span>1.0, 1.0);
-  r <span class="operator">=</span> <span class="function">clamp</span>(r * (1.0 <span class="operator">+</span> pan) * master_gain, <span class="operator">-</span>1.0, 1.0);
+img = <span class="fn">frame</span>(<span class="str">"assets/photo.png"</span>);
+finished = img -&gt; lift_shadows(38, 150);</code></pre></div><div class="grid three"><article class="card"><span class="tag">Channels</span><h3>r, g, b, a</h3><p>Current pixel channels, usually 0–255. Unassigned values pass through.</p></article><article class="card"><span class="tag">Position</span><h3>x, y</h3><p>Current pixel coordinates for gradients, grids, or position-dependent effects.</p></article><article class="card"><span class="tag">Dimensions</span><h3>width, height</h3><p>Frame dimensions for centering and scaling a per-pixel calculation.</p></article></div><p class="prose">Parameters are given at the pipeline call. Filters support local lets, math, conditionals, nested filter calls, and loops whose bounds can be evaluated when the filter compiles. Those loops are unrolled; dynamic per-pixel bounds are unsupported. Declare a filter before another filter that calls it.</p></section>
+<section class="section" id="functions" data-search="function fn user defined return cards card generator poster template layout batch creation"><div class="head"><span class="ix">06</span><div><h2>Functions & generated cards</h2><p class="lead">A user-defined fn is a recipe. Put the layout in one function, make variable pieces parameters, then call it once or in a loop.</p></div></div><p class="prose">For a graphic card, make a background, load and size artwork, rasterize heading and caption text, blend each part into position, and return the completed Frame. The caller controls the copy, accent, and output filename.</p><div class="code"><div class="codehead">Reusable card recipe</div><pre><code><span class="kw">filter</span> backdrop() {
+    r = r * 0.72; g = g * 0.76; b = b * 0.84;
 }
+<span class="kw">fn</span> make_card(title, subtitle, red, green, blue) {
+    <span class="kw">let</span> background = <span class="fn">blank</span>(720, 720) -&gt; backdrop();
+    <span class="kw">let</span> artwork = <span class="fn">frame</span>(<span class="str">"assets/cover.png"</span>) -&gt; <span class="fn">resize</span>(656, 360);
+    <span class="kw">let</span> heading = <span class="fn">text</span>(title, <span class="str">"assets/Georgia.ttf"</span>, 46, red, green, blue);
+    <span class="kw">let</span> caption = <span class="fn">text</span>(subtitle, <span class="str">"assets/Georgia.ttf"</span>, 25, 220, 225, 235);
+    <span class="kw">return</span> background
+        -&gt; <span class="fn">blend</span>(32, 42, artwork, 0.92)
+        -&gt; <span class="fn">blend</span>(32, 445, heading, 1.0)
+        -&gt; <span class="fn">blend</span>(32, 540, caption, 1.0);
+}
+card = make_card(<span class="str">"NORTH STAR"</span>, <span class="str">"A field note from the coast"</span>, 110, 225, 210);
+<span class="fn">export</span>(card, <span class="str">"output/north_star.png"</span>);</code></pre></div><div class="callout"><strong>Design tip:</strong> keep canvas size, font path, margins, and typography consistent in the recipe. Parameterize only the details that change. That gives a coherent series and makes redesigns a one-function edit.</div><h3>Turn the recipe into a card deck</h3><div class="code"><div class="codehead">Use conditions for small content sets</div><pre><code><span class="kw">for</span> page <span class="kw">in</span> 0..3 {
+    <span class="kw">if</span> page == 0 {
+        title = <span class="str">"FIRST LIGHT"</span>; subtitle = <span class="str">"Begin with a blank page"</span>;
+        red = 255; green = 190; blue = 110;
+    } <span class="kw">elif</span> page == 1 {
+        title = <span class="str">"OPEN WATER"</span>; subtitle = <span class="str">"Let the color breathe"</span>;
+        red = 100; green = 220; blue = 215;
+    } <span class="kw">else</span> {
+        title = <span class="str">"WIDE SKY"</span>; subtitle = <span class="str">"A quiet place to land"</span>;
+        red = 150; green = 175; blue = 255;
+    }
+    page_card = make_card(title, subtitle, red, green, blue);
+    <span class="fn">export</span>(page_card, f<span class="str">"output/card_{page:02}.png"</span>);
+}</code></pre></div><p class="prose">Functions can include locals, conditions, loops, calls to other functions, and return. Use them for layout templates, repeated calculations, and helper logic. Keep assets and output paths relative to a clearly chosen working directory.</p></section>
+<section class="section" id="pipeline" data-search="pipeline arrow stages resize crop blend blur composition operation frame track order"><div class="head"><span class="ix">07</span><div><h2>Pipelines</h2><p class="lead">The arrow operator runs stages left to right on Frames or Tracks. Order changes the result.</p></div></div><div class="code"><div class="codehead">A readable image chain</div><pre><code>poster = <span class="fn">frame</span>(<span class="str">"assets/photo.png"</span>)
+    -&gt; <span class="fn">resize</span>(1200, 800)
+    -&gt; <span class="fn">saturation</span>(0.8)
+    -&gt; <span class="fn">blur</span>(3)
+    -&gt; <span class="fn">crop</span>(0, 0, 1080, 720);</code></pre></div><div class="tablewrap"><table><thead><tr><th>Frame stage</th><th>Behavior</th></tr></thead><tbody><tr><td>resize(w,h)</td><td>Nearest-neighbor resize.</td></tr><tr><td>crop(x,y,w,h)</td><td>Extracts a rectangular region.</td></tr><tr><td>blend(x,y,frame,factor)</td><td>Uses the overlay pixel's alpha and stage opacity for source-over compositing.</td></tr><tr><td>blur(size)</td><td>Dynamic box-blur convolution; even sizes are increased to the next odd size.</td></tr><tr><td>declared_filter(args)</td><td>Applies a custom pixel filter. Kernels are called with no parameters.</td></tr><tr><td>Native audio stages</td><td>gain(db), fade_in(s), fade_out(s), reverse(), speed(factor).</td></tr></tbody></table></div><p class="prose">Resize before a spatial effect if it should use the new dimensions; crop after if you want to trim the processed image. Custom filters can call earlier declared filters to build larger looks from small parts.</p></section>
+<section class="section" id="flow" data-search="conditions if elif else loops range folder truthy compile time unroll"><div class="head"><span class="ix">08</span><div><h2>Conditions & loops</h2><p class="lead">Use conditions to choose a processing path and loops to generate a family of results.</p></div></div><div class="code"><div class="codehead">Pick a setting, then render variants</div><pre><code>quality = 2;
+<span class="kw">if</span> quality == 1 { amount = 12; }
+<span class="kw">elif</span> quality == 2 { amount = 24; }
+<span class="kw">else</span> { amount = 36; }
 
-sound <span class="operator">=</span> <span class="function">track</span>(<span class="string">"music.mp3"</span>);
-processed <span class="operator">=</span> sound <span class="operator">-&gt;</span> <span class="function">auto_pan</span>(2.5, 1.2);
-<span class="function">export</span>(processed, <span class="string">"output.wav"</span>);</pre>
-            </div>
-
-            <div id="section-kernels" class="content-section hidden w-full">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Kernels (Convolution)</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">A <code>kernel</code> defines a
-                    convolution matrix[cite: 1]. The matrix must be square, and all entries must be numeric
-                    literals[cite: 1]. The kernel is automatically normalised by dividing by the sum of its
-                    weights[cite: 1].</p>
-
-                <pre
-                    class="code-block"><span class="comment">// Declare a 3x3 sharpen kernel[cite: 1]</span>
-<span class="keyword">kernel</span> edge_detect <span class="operator">=</span> [
-  [<span class="operator">-</span>1, <span class="operator">-</span>1, <span class="operator">-</span>1],
-  [<span class="operator">-</span>1,  8, <span class="operator">-</span>1],
-  [<span class="operator">-</span>1, <span class="operator">-</span>1, <span class="operator">-</span>1]
+img = <span class="fn">frame</span>(<span class="str">"assets/photo.png"</span>);
+<span class="kw">for</span> i <span class="kw">in</span> 0..4 {
+    version = img -&gt; <span class="fn">brightness</span>(i * amount);
+    <span class="fn">export</span>(version, f<span class="str">"output/variant_{i:02}.png"</span>);
+}</code></pre></div><div class="grid"><article class="card"><h3>Range loops</h3><p>Execute the body for each value in the half-open range. The loop variable can become a filter argument or filename component.</p></article><article class="card"><h3>Folder loops</h3><p><code>for image in photos { ... }</code> visits images in sorted order.</p></article></div><p class="prose">Conditions work in scripts, functions, image filters, and audio filters. Nonzero is true. Logical <code>and</code> and <code>or</code> evaluate both sides; they do not short-circuit.</p></section>
+<section class="section" id="masks" data-search="spatial masks rectangular x y ranges apply region filter outside unchanged"><div class="head"><span class="ix">09</span><div><h2>Spatial masks</h2><p class="lead">Add x and y ranges after a filter stage to restrict it to one rectangle. Pixels outside remain unchanged for that stage.</p></div></div><div class="code"><div class="codehead">Warm a selected window</div><pre><code><span class="kw">filter</span> warm() {
+    r = <span class="fn">clamp</span>(r + 22, 0, 255);
+    b = <span class="fn">clamp</span>(b - 12, 0, 255);
+}
+img = <span class="fn">frame</span>(<span class="str">"assets/photo.png"</span>);
+result = img -&gt; warm()[120..680, 80..420];</code></pre></div><p class="prose">Syntax is <code>filter(args)[x_range, y_range]</code>. Range starts are included and ends excluded. <code>[0..width, 0..height]</code> covers the whole image. Only rectangular masks are exposed by the script parser.</p></section>
+<section class="section" id="kernels" data-search="kernel convolution matrix blur sharpen edge emboss normalization"><div class="head"><span class="ix">10</span><div><h2>Kernels</h2><p class="lead">A kernel applies a small weight matrix around each pixel for blurs, sharpening, embossing, and edge detection.</p></div></div><div class="code"><div class="codehead">A sharpen kernel</div><pre><code><span class="kw">kernel</span> sharpen = [
+    [ 0, -1,  0],
+    [-1,  5, -1],
+    [ 0, -1,  0]
 ];
-
-img <span class="operator">=</span> <span class="function">frame</span>(<span class="string">"photo.png"</span>);
-<span class="comment">// Kernels are applied as a filter stage in a pipeline[cite: 1]</span>
-result <span class="operator">=</span> img <span class="operator">-&gt;</span> <span class="function">edge_detect</span>();</pre>
-            </div>
-
-            <div id="section-prelude" class="content-section hidden w-full">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Prelude Functions</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">DriveLang ships with several
-                    built-in native operations and functions that do not require explicit declarations[cite: 1].</p>
-
-                <h3 class="text-lg md:text-xl font-semibold text-white mb-3 mt-6">I/O & Utilities</h3>
-                <ul class="list-disc list-inside text-sm md:text-base text-drive-muted mb-4 space-y-2">
-                    <li><code class="text-cyan-400 font-mono">print("value is {}", x)</code>: Writes to stdout. Numbers
-                        print as integers if they have no fractional part[cite: 1].</li>
-                    <li><code class="text-cyan-400 font-mono">export(media, "output_path")</code>: Exports a Frame as
-                        PNG or a Track as WAV (32-bit float). The path must be a string literal[cite: 1].</li>
-                </ul>
-
-                <h3 class="text-lg md:text-xl font-semibold text-white mb-3 mt-6">Media Loading (Constructors)</h3>
-                <ul class="list-disc list-inside text-sm md:text-base text-drive-muted mb-4 space-y-2">
-                    <li><code class="text-cyan-400 font-mono">frame("path")</code>: Loads an image file (PNG, JPG, etc.)
-                        as RGBA[cite: 1].</li>
-                    <li><code class="text-cyan-400 font-mono">blank(width, height)</code>: Creates a transparent black
-                        RGBA frame[cite: 1].</li>
-                    <li><code class="text-cyan-400 font-mono">text(str, font_path, size, r, g, b)</code>: Rasterizes a
-                        string into a frame using the given TTF font and RGB colour[cite: 1].</li>
-                    <li><code class="text-cyan-400 font-mono">track("path")</code>: Decodes an audio file (MP3, FLAC,
-                        OGG, WAV, etc.)[cite: 1].</li>
-                    <li><code class="text-cyan-400 font-mono">silence(duration, sample_rate, channels)</code>: Creates a
-                        silent track of the given duration[cite: 1].</li>
-                </ul>
-
-                <h3 class="text-lg md:text-xl font-semibold text-white mb-3 mt-6">Native Frame Pipeline Operations</h3>
-                <p class="text-sm md:text-base text-drive-muted mb-4 leading-relaxed">These are applied via the pipeline
-                    operator (<code>-&gt;</code>) without needing a filter declaration[cite: 1].</p>
-                <ul class="list-disc list-inside text-sm md:text-base text-drive-muted space-y-2">
-                    <li><code class="text-cyan-400 font-mono">resize(w, h)</code>: Performs nearest-neighbour
-                        resize[cite: 1].</li>
-                    <li><code class="text-cyan-400 font-mono">crop(x, y, w, h)</code>: Extracts a rectangular
-                        region[cite: 1].</li>
-                    <li><code class="text-cyan-400 font-mono">blend(x, y, frame2, alpha)</code>: Alpha-composites
-                        <code>frame2</code> onto the base at <code>(x, y)</code>[cite: 1].
-                    </li>
-                    <li><code class="text-cyan-400 font-mono">blur(size)</code>: Generates a box-blur kernel dynamically
-                        based on radius[cite: 1].</li>
-                </ul>
-            </div>
-
-            <div id="section-control" class="content-section hidden w-full">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Control Flow</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">Drive supports <code>for</code>
-                    loops iterating over a range, and <code>if / else / elif</code> inside filters and at script
-                    level[cite: 1]. Conditionals evaluate any non-zero number as truthy[cite: 1].</p>
-
-                <pre class="code-block"><span class="keyword">filter</span> <span class="function">threshold</span>(level) {
-  <span class="keyword">let</span> luma <span class="operator">=</span> 0.299 * r <span class="operator">+</span> 0.587 * g <span class="operator">+</span> 0.114 * b;
-
-  <span class="comment">// Conditional inside a filter runs per-pixel[cite: 1]</span>
-  <span class="keyword">if</span> luma <span class="operator">&gt;</span> level {
-    r <span class="operator">=</span> 255; g <span class="operator">=</span> 255; b <span class="operator">=</span> 255;
-  } <span class="keyword">else</span> {
-    r <span class="operator">=</span> 0; g <span class="operator">=</span> 0; b <span class="operator">=</span> 0;
-  }
+image = <span class="fn">frame</span>(<span class="str">"assets/photo.png"</span>) -&gt; sharpen();</code></pre></div><p class="prose">Matrices must be square and odd-sized; entries are numeric literals. Nonzero weight sums are normalized by dividing the result by the sum. Zero-sum edge kernels remain unnormalized. Border pixels sample by clamping coordinates to the image edge. See the standard-library catalog for presets.</p></section>
+<section class="section" id="audio" data-search="audio track af dsp sample sound silence merge concat slice channel split reverse speed fade"><div class="head"><span class="ix">11</span><div><h2>Audio</h2><p class="lead">An <code>af</code> declaration transforms samples in a Track and can use time, sample rate, conditions, and math.</p></div></div><div class="code"><div class="codehead">Synthesize and shape a tone</div><pre><code><span class="kw">af</span> bell(freq, level) {
+    <span class="kw">let</span> wave = <span class="fn">sin</span>(6.2831853 * freq * time) * level;
+    l = wave;
+    r = wave;
 }
-
-<span class="comment">// Iterates i over a range[cite: 1]</span>
-<span class="keyword">for</span> i <span class="keyword">in</span> 0..10 {
-  <span class="function">print</span>(<span class="string">"Processing frame iteration {}"</span>, i);
+sound = <span class="fn">silence</span>(1.5, 44100, 2)
+    -&gt; bell(440, 0.3)
+    -&gt; <span class="fn">hard_clip</span>(0.8)
+    -&gt; <span class="fn">fade_in</span>(0.15)
+    -&gt; <span class="fn">fade_out</span>(0.25);
+<span class="fn">export</span>(sound, <span class="str">"output/bell.wav"</span>);</code></pre></div><div class="grid three"><article class="card"><span class="tag">Variables</span><h3>l, r, time, sr</h3><p>Left/right samples, timestamp in seconds, sample rate in hertz.</p></article><article class="card"><span class="tag">Compose tracks</span><h3>Built-ins</h3><p><code>merge</code>, <code>concat</code>, <code>slice</code>, <code>channel_split</code>, <code>reverse</code>, <code>speed</code>.</p></article><article class="card"><span class="tag">Native stages</span><h3>Gain & fades</h3><p><code>gain(db)</code>, <code>fade_in(seconds)</code>, <code>fade_out(seconds)</code>.</p></article></div><p class="prose"><code>merge(a,b)</code> sums samples and pads the shorter track with silence; it does not normalize peaks. <code>concat</code> requires matching sample rate and channel count. <code>slice(track,start,end)</code> selects complete blocks by timestamp, not exact sample boundaries. <code>channel_split(track,0)</code> extracts left, <code>1</code> extracts right. <code>speed(2)</code> doubles speed, shortens duration, and changes pitch. Silence is assembled in 1024-sample blocks and can be slightly longer than requested.</p><div class="callout warn"><strong>Similar names, different behavior:</strong> std::audio defines <code>linear_gain(amount)</code> and <code>sample_fade_in(duration)</code>. Native pipeline <code>gain(db)</code> uses decibels; native <code>fade_in(duration)</code> is its own operation.</div></section>
+<section class="section" id="folders" data-search="folder batch processing image path index name len metadata sorted"><div class="head"><span class="ix">12</span><div><h2>Folder batches</h2><p class="lead">A Folder contains supported image files in sorted order. Process each file, or address one by a name or numeric position.</p></div></div><div class="code"><div class="codehead">Batch export</div><pre><code>photos = <span class="fn">folder</span>(<span class="str">"assets/photos"</span>);
+<span class="fn">print</span>(f<span class="str">"Found {photos.len()} images in {photos.path}\n"</span>);
+<span class="kw">for</span> photo <span class="kw">in</span> photos {
+    done = photo -&gt; <span class="fn">resize</span>(640, 640) -&gt; <span class="fn">vivid</span>();
+    <span class="fn">export</span>(done, f<span class="str">"output/{photo.name}.png"</span>);
 }
-
-<span class="comment">// Conditional at the script level[cite: 1]</span>
-quality <span class="operator">=</span> 1;
-<span class="keyword">if</span> quality <span class="operator">==</span> 1 {
-  img <span class="operator">-&gt;</span> <span class="function">blur</span>(3);
-}</pre>
-            </div>
-
-            <div id="section-builtins" class="content-section hidden w-full">
-                <h2 class="text-2xl md:text-3xl font-bold text-white mb-4">Built-in Math Functions</h2>
-                <p class="text-sm md:text-base text-drive-muted mb-6 leading-relaxed">DriveLang ships with standard
-                    mathematical functions[cite: 1].</p>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-drive-muted font-mono mb-6">
-                    <div class="bg-slate-900 p-4 rounded-lg border border-slate-800">
-                        <ul class="space-y-3">
-                            <li><span class="text-cyan-400">abs(x)</span></li>
-                            <li><span class="text-cyan-400">min(a, b)</span> / <span class="text-cyan-400">max(a,
-                                    b)</span></li>
-                            <li><span class="text-cyan-400">clamp(x, min, max)</span></li>
-                            <li><span class="text-cyan-400">lerp(a, b, t)</span></li>
-                            <li><span class="text-cyan-400">smooth_lerp(a, b, t)</span></li>
-                        </ul>
-                    </div>
-                    <div class="bg-slate-900 p-4 rounded-lg border border-slate-800">
-                        <ul class="space-y-3">
-                            <li><span class="text-cyan-400">sin(x)</span> / <span class="text-cyan-400">cos(x)</span> /
-                                <span class="text-cyan-400">tan(x)</span>
-                            </li>
-                            <li><span class="text-cyan-400">sqrt(x)</span></li>
-                            <li><span class="text-cyan-400">pow(a, b)</span></li>
-                            <li><span class="text-cyan-400">floor(x)</span> / <span class="text-cyan-400">ceil(x)</span>
-                                / <span class="text-cyan-400">round(x)</span></li>
-                            <li><span class="text-cyan-400">log(x)</span> / <span class="text-cyan-400">exp(x)</span>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-    </div>
-
-    <script>
-        function showSection(id) {
-            document.querySelectorAll('.content-section').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById('section-' + id).classList.remove('hidden');
-            event.currentTarget.classList.add('active');
-
-            if (window.innerWidth < 768) {
-                event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-            }
-        }
-    </script>
-</body>
-
-</html>
+first = photos[0];
+cover = photos[<span class="str">"cover.jpg"</span>];</code></pre></div><p class="prose">Useful operations: <code>photos.len</code>, <code>photos.len()</code>, <code>len(photos)</code>, <code>photos.path</code>, <code>photos[0]</code>, and <code>photos["file.png"]</code>. <code>len(string)</code> returns the string's byte length. Folder loops visit recognized image formats; non-images are ignored.</p></section>
+<section class="section" id="stdlib" data-search="standard library std core color advanced audio kernels function catalog"><div class="head"><span class="ix">13</span><div><h2>Standard library</h2><p class="lead">These modules are source declarations you can import, inspect, reuse, or adapt.</p></div></div><div class="callout">Imports: <code>std::core</code>, <code>std::color</code>, <code>std::advanced</code>, <code>std::audio</code>, <code>std::kernels</code>. Declarations share one scope: later same-named filters replace earlier ones. Both core and color define <code>fade(amount)</code>; import order decides which one is active.</div><h3>Core image filters</h3><p class="prose"><code>brightness(amount)</code>, <code>contrast(factor)</code>, <code>gain(amount)</code>, <code>invert()</code>, <code>grayscale()</code>, <code>red_gain(amount)</code>, <code>green_gain(amount)</code>, <code>blue_gain(amount)</code>, <code>red_only()</code>, <code>green_only()</code>, <code>blue_only()</code>, <code>alpha(value)</code>, <code>opacity(amount)</code>, <code>quantize(levels)</code>, <code>clamp_range(min,max)</code>, <code>clamp_low(min)</code>, <code>clamp_high(max)</code>, <code>gamma(value)</code>, <code>mask_white()</code>, <code>mask_black()</code>, <code>max_channel()</code>, <code>min_channel()</code>, <code>fade(amount)</code>, <code>opaque()</code>, <code>transparent()</code>, <code>flatten(background_r,background_g,background_b)</code>.</p><p class="prose">Quantize accepts 2–256 levels and includes black and white endpoints. Flatten composites transparency over the supplied RGB background and sets alpha to opaque. Example: <code>cutout -> flatten(255,255,255)</code> makes a white-background upload-ready PNG.</p><h3>Color looks</h3><p class="prose"><code>sepia()</code>, <code>hdr(strength)</code>, <code>hdr2(strength)</code>, <code>teal_orange(amount)</code>, <code>vintage()</code>, <code>warm()</code>, <code>cool()</code>, <code>vivid()</code>, <code>muted()</code>, <code>red_tint()</code>, <code>green_tint()</code>, <code>blue_tint()</code>, <code>cyanotype()</code>, <code>noir()</code>, <code>saturation(amount)</code>, <code>fade(amount)</code>, <code>purple_tint(amount)</code>, <code>amber_tint(amount)</code>, <code>moonlight(amount)</code>, <code>sunset(amount)</code>, <code>forest(amount)</code>, <code>autumn(amount)</code>, <code>cross_process()</code>, <code>bleach_bypass(amount)</code>, <code>vibrance(amount)</code>.</p><h4>How core filters behave</h4><div class="tablewrap"><table><thead><tr><th>Filter</th><th>Effect</th></tr></thead><tbody>
+<tr><td>brightness(amount)</td><td>Adds amount to red, green, and blue. Negative values darken.</td></tr>
+<tr><td>contrast(factor)</td><td>Scales RGB distance from midpoint 128.</td></tr>
+<tr><td>gain(amount)</td><td>Multiplies RGB channels; this is image gain, not audio decibels.</td></tr>
+<tr><td>invert(), grayscale()</td><td>Invert subtracts channels from 255. Grayscale uses the simple RGB average.</td></tr>
+<tr><td>red_gain, green_gain, blue_gain</td><td>Multiply one selected channel. The *_only() filters keep that channel and zero the other two.</td></tr>
+<tr><td>alpha(value), opacity(amount)</td><td>Set alpha or multiply the current alpha.</td></tr>
+<tr><td>quantize(levels)</td><td>Bucket RGB values into fewer levels for a posterized look.</td></tr>
+<tr><td>clamp_range(min,max), clamp_low(min), clamp_high(max)</td><td>Bound RGB channels to a range, minimum, or maximum.</td></tr>
+<tr><td>gamma(value)</td><td>Apply a power curve to normalized RGB values.</td></tr>
+<tr><td>mask_white(), mask_black()</td><td>Set RGB to white or black while leaving alpha unchanged.</td></tr>
+<tr><td>max_channel(), min_channel()</td><td>Move channels toward the largest or smallest channel value.</td></tr>
+<tr><td>fade(amount), opaque(), transparent()</td><td>Core fade scales alpha; opaque sets alpha to 255; transparent sets it to 0.</td></tr>
+</tbody></table></div>
+<h4>Color filter behavior</h4><div class="tablewrap"><table><thead><tr><th>Filter</th><th>Effect</th></tr></thead><tbody>
+<tr><td>sepia()</td><td>Raises red and lowers blue.</td></tr><tr><td>hdr(strength)</td><td>Pushes channels away from midpoint 128 to increase contrast.</td></tr>
+<tr><td>hdr2(strength)</td><td>Lifts shadows with a power curve, then scales brightness.</td></tr><tr><td>teal_orange(amount)</td><td>Raises red and blue while lowering green.</td></tr>
+<tr><td>vintage()</td><td>Softens contrast and shifts red up and blue down.</td></tr><tr><td>warm(), cool()</td><td>Warm raises red and lowers blue; cool does the reverse.</td></tr>
+<tr><td>vivid(), muted()</td><td>Increase or reduce contrast around midpoint 128.</td></tr><tr><td>red_tint(), green_tint(), blue_tint()</td><td>Multiply the named color channel.</td></tr>
+<tr><td>cyanotype()</td><td>Raises green and blue for a cyan-blue treatment.</td></tr><tr><td>noir()</td><td>Uses average RGB as monochrome, then boosts contrast.</td></tr>
+<tr><td>saturation(amount)</td><td>Interpolates gray toward original RGB: 0 is grayscale, 1 is unchanged, above 1 oversaturates.</td></tr><tr><td>color fade(amount)</td><td>Moves RGB toward white; core fade instead changes alpha.</td></tr>
+<tr><td>purple_tint(amount), amber_tint(amount)</td><td>Add purple (red/blue) or amber (red/green) channel offsets.</td></tr>
+<tr><td>moonlight, sunset, forest, autumn(amount)</td><td>Scale channels for cool blue, warm orange, green, or red/orange looks.</td></tr>
+<tr><td>cross_process()</td><td>Apply a different power curve to each RGB channel.</td></tr><tr><td>bleach_bypass(amount)</td><td>Mix toward gray and increase contrast.</td></tr>
+<tr><td>vibrance(amount)</td><td>Push channels away from the pixel average to emphasize color differences.</td></tr>
+</tbody></table></div>
+<h4>Audio filters, one by one</h4><div class="tablewrap"><table><thead><tr><th>Filter</th><th>Effect</th></tr></thead><tbody>
+<tr><td>linear_gain(amount)</td><td>Multiply both channels by a linear factor.</td></tr><tr><td>invert()</td><td>Flip sample polarity.</td></tr><tr><td>mute(), mute_left(), mute_right()</td><td>Silence both channels or one selected channel.</td></tr>
+<tr><td>swap()</td><td>Exchange left and right.</td></tr><tr><td>mono()</td><td>Replace both channels with their average.</td></tr><tr><td>left_only(), right_only()</td><td>Copy one channel into the other.</td></tr>
+<tr><td>hard_clip(limit)</td><td>Clamp samples to plus/minus limit.</td></tr><tr><td>distortion(gain)</td><td>Amplify then clamp to the normal sample range.</td></tr><tr><td>gate(threshold)</td><td>Zero samples whose absolute value is below threshold.</td></tr>
+<tr><td>tremolo(freq,depth)</td><td>Modulate volume periodically using a sine wave.</td></tr><tr><td>ring(freq)</td><td>Multiply samples by a sine wave at the chosen frequency.</td></tr>
+<tr><td>sample_fade_in(duration)</td><td>Scale volume up from the start of the track.</td></tr><tr><td>crusher(levels)</td><td>Round sample values to fewer amplitude steps.</td></tr><tr><td>rectify()</td><td>Turn negative samples positive with absolute value.</td></tr>
+</tbody></table></div>
+<h4>Kernel presets by family</h4><div class="tablewrap"><table><thead><tr><th>Presets</th><th>Effect</th></tr></thead><tbody>
+<tr><td>box_blur, gaussian_blur, soft_blur</td><td>Uniform, center-weighted, or gentler blur.</td></tr><tr><td>sharpen, giga_sharpen, ultra_sharpen, cross_sharpen, high_contrast</td><td>Sharpen with increasing edge emphasis.</td></tr><tr><td>edge, edge_soft, edge_strong, cartoon_edge</td><td>Detect edges at different strengths; cartoon_edge produces a thick outline-like response.</td></tr>
+<tr><td>emboss, emboss_reverse</td><td>Relief lighting in opposite directions.</td></tr><tr><td>outline, crystal, ridge</td><td>Outline and high-frequency detail responses.</td></tr><tr><td>motion_horizontal, motion_vertical</td><td>Directional motion blur.</td></tr><tr><td>sobel_x, sobel_y</td><td>Detect vertical or horizontal changes.</td></tr><tr><td>line_horizontal, line_vertical</td><td>Emphasize horizontal or vertical structures.</td></tr>
+</tbody></table></div>
+<h3>Advanced image looks</h3><div class="tablewrap"><table><thead><tr><th>Filter</th><th>Effect</th></tr></thead><tbody><tr><td>chroma_key(r,g,b,tolerance)</td><td>Makes pixels near a target RGB color transparent.</td></tr><tr><td>color_splash_red(tolerance)</td><td>Keeps red-dominant colors and grays the rest.</td></tr><tr><td>split_tone(split_point)</td><td>Warm highlights and cool shadows.</td></tr><tr><td>scanlines(intensity)</td><td>Darkens alternating rows.</td></tr><tr><td>grid(spacing,r,g,b)</td><td>Draws a pixel grid.</td></tr><tr><td>vignette(strength)</td><td>Darkens corners relative to image center.</td></tr><tr><td>depth_fog(r,g,b)</td><td>Blends toward fog color toward the bottom edge.</td></tr><tr><td>cyberpunk_glitch(frequency,intensity)</td><td>Repeating horizontal glitch pattern.</td></tr></tbody></table></div><h3>Audio filters</h3><p class="prose"><code>linear_gain(amount)</code>, <code>invert()</code>, <code>mute()</code>, <code>mute_left()</code>, <code>mute_right()</code>, <code>swap()</code>, <code>mono()</code>, <code>left_only()</code>, <code>right_only()</code>, <code>hard_clip(limit)</code>, <code>distortion(gain)</code>, <code>gate(threshold)</code>, <code>tremolo(freq,depth)</code>, <code>ring(freq)</code>, <code>sample_fade_in(duration)</code>, <code>crusher(levels)</code>, <code>rectify()</code>.</p><h3>Kernel presets</h3><p class="prose"><code>box_blur()</code>, <code>gaussian_blur()</code>, <code>soft_blur()</code>, <code>sharpen()</code>, <code>giga_sharpen()</code>, <code>ultra_sharpen()</code>, <code>edge()</code>, <code>edge_soft()</code>, <code>edge_strong()</code>, <code>emboss()</code>, <code>emboss_reverse()</code>, <code>outline()</code>, <code>motion_horizontal()</code>, <code>motion_vertical()</code>, <code>cartoon_edge()</code>, <code>high_contrast()</code>, <code>cross_sharpen()</code>, <code>crystal()</code>, <code>ridge()</code>, <code>sobel_x()</code>, <code>sobel_y()</code>, <code>line_horizontal()</code>, <code>line_vertical()</code>.</p></section>
+<section class="section" id="tips" data-search="tips tricks limitations unsupported caveats checklist workflow design"><div class="head"><span class="ix">14</span><div><h2>Tricks & current limits</h2><p class="lead">Small habits keep a script repeatable. The limits below describe the language surface exposed today.</p></div></div><div class="grid"><article class="card"><span class="tag">Tip</span><h3>Use padded names</h3><p><code>f"image_{i:04}.png"</code> sorts in numeric order.</p></article><article class="card"><span class="tag">Tip</span><h3>Export checkpoints</h3><p>Save intermediate images while building a pipeline, then keep only useful deliverables.</p></article><article class="card"><span class="tag">Tip</span><h3>Normalize coordinates</h3><p>Use <code>x / width</code> and <code>y / height</code> for scale-independent gradients.</p></article><article class="card"><span class="tag">Tip</span><h3>Reuse the layout recipe</h3><p>Keep font, canvas dimensions, margins, and typography in one function; parameterize the changing text and accents.</p></article><article class="card"><span class="tag">Tip</span><h3>Know the channel ranges</h3><p>Image channels use 0–255. Audio samples usually use −1–1. Trig uses radians.</p></article><article class="card"><span class="tag">Tip</span><h3>Read a library formula</h3><p>Standard-library filters are regular source; their math defines what each parameter does.</p></article></div><h3>Current boundaries</h3><ul class="prose"><li>No script-level video import, timeline, or video export workflow.</li><li>No classes, arrays, dictionaries, or import aliases. Kernel matrices are the supported matrix literal form.</li><li>Rectangular masks only; circle-mask internals are not exposed in script syntax.</li><li>Loops inside pixel filters require compile-time bounds and are unrolled.</li><li>Logical and/or do not short-circuit.</li><li>Resize uses nearest-neighbor. Blend uses per-pixel source-over alpha; use core flatten(r,g,b) to make a deliberate opaque upload.</li></ul><h3>Repository examples</h3><p class="prose">Run with <code>drive run examples/FILE.drive</code>: hello, basic_filters, grayscale, kernels, masked_filters, alpha_composite_upload (alpha-safe blending and an opaque upload-ready image), intro (15 generated slides), batch_loop, audio, audio_composition_mp3, conditionals, full_pipeline, filter_composition, math_and_functions, folder_batch_processing, and filter_loops_and_accumulation. They use the bundled sample asset and write under Outputs/.</p></section>
+<footer class="footer"><strong>DriveLang Field Guide</strong> · Current language reference · <a href="../GUIDE.md">Markdown guide</a> · <a href="https://github.com/KartikeyaIO/DriveLang" target="_blank" rel="noopener">Repository ↗</a></footer>
+</main></div><button class="back" id="back" aria-label="Back to top">↑ Top</button>
+<script>
+(() => {
+ const nav=document.getElementById("nav"), links=[...nav.querySelectorAll("a")], sections=[...document.querySelectorAll("main .hero,main .section")], menu=document.getElementById("menu"), search=document.getElementById("search"), noresults=document.getElementById("noresults"), back=document.getElementById("back");
+ const close=()=>{document.body.classList.remove("nav-open");menu.setAttribute("aria-expanded","false");menu.setAttribute("aria-label","Open navigation")};
+ menu.addEventListener("click",()=>{const open=document.body.classList.toggle("nav-open");menu.setAttribute("aria-expanded",String(open));menu.setAttribute("aria-label",open?"Close navigation":"Open navigation")});
+ links.forEach(a=>a.addEventListener("click",close));
+ document.addEventListener("click",e=>{if(document.body.classList.contains("nav-open")&&!e.target.closest(".side,.menu"))close()});
+ document.addEventListener("keydown",e=>{if(e.key==="/"&&document.activeElement.tagName!=="INPUT"){e.preventDefault();search.focus()}if(e.key==="Escape"){search.value="";search.dispatchEvent(new Event("input"));close()}});
+ search.addEventListener("input",()=>{const q=search.value.trim().toLowerCase();let n=0;sections.forEach(s=>{const ok=!q||(s.dataset.search+" "+s.textContent).toLowerCase().includes(q);s.classList.toggle("hidden-search",!ok);const a=links.find(x=>x.hash==="#"+s.id);if(a)a.classList.toggle("hidden-search",!ok);if(ok)n++});noresults.style.display=n?"none":"block"});
+ const observer=new IntersectionObserver(entries=>{const e=entries.filter(x=>x.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];if(!e)return;links.forEach(a=>a.classList.toggle("active",a.hash==="#"+e.target.id))},{rootMargin:"-18% 0px -68% 0px",threshold:[0,.1,.25]});sections.forEach(s=>observer.observe(s));
+ document.querySelectorAll(".code").forEach(box=>{const code=box.querySelector("pre code");if(!code)return;const b=document.createElement("button");b.className="copy";b.type="button";b.textContent="Copy";b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(code.innerText);b.textContent="Copied"}catch{const r=document.createRange();r.selectNodeContents(code);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);b.textContent="Select and copy"}setTimeout(()=>b.textContent="Copy",1300)});box.querySelector(".codehead").append(b)});
+ window.addEventListener("scroll",()=>back.classList.toggle("show",scrollY>650),{passive:true});back.addEventListener("click",()=>scrollTo({top:0,behavior:"smooth"}));
+})();
+</script>
+</body></html>

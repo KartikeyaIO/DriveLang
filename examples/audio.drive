@@ -1,24 +1,19 @@
-// 08_audio.drive
-// Load an audio track, apply a custom audio filter, adjust gain, export as WAV.
+// Make and process a short synthetic tone; no external audio file is needed.
+import std::audio;
 
-af lowpass(cutoff) {
-    // Simple one-pole low-pass approximation using lerp.
-    // cutoff is a blend factor between 0 (silence) and 1 (dry signal).
-    l = lerp(0, l, cutoff);
-    r = lerp(0, r, cutoff);
+af tone(freq, level) {
+    let sample = sin(6.2831853 * freq * time) * level;
+    l = sample;
+    r = sample;
 }
 
-af boost_bass(amount) {
-    // Amplify low-frequency content by adding a phase-shifted copy.
-    // This is illustrative; a real implementation would use a proper filter.
-    let bass = sin(time * 80) * amount;
-    l = clamp(l + bass, -1, 1);
-    r = clamp(r + bass, -1, 1);
-}
+silence_track = silence(2.0, 44100, 2);
+processed = silence_track
+    -> tone(220, 0.35)
+    -> tremolo(4, 0.25)
+    -> hard_clip(0.9)
+    -> gain(-4)
+    -> fade_in(0.15)
+    -> fade_out(0.25);
 
-music = track("song.mp3");
-
-// Apply low-pass then a gentle bass boost
-processed = music -> lowpass(0.6) -> boost_bass(0.05);
-
-export(processed, "processed.wav");
+export(processed, "Outputs/audio_processed.wav");

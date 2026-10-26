@@ -51,6 +51,8 @@ impl fmt::Display for IOError {
 pub fn load_image(path: &str, fmt: &str) -> Result<Frame, FrameError> {
     let img = Reader::open(path)
         .map_err(|_| FrameError::EmptyFrame)?
+        .with_guessed_format()
+        .map_err(|_| FrameError::EmptyFrame)?
         .decode()
         .map_err(|_| FrameError::EmptyFrame)?;
 
@@ -420,5 +422,92 @@ pub fn encode_wav_i16(track: &Track, path: &Path) -> Result<(), WavEncodeError> 
     }
 
     writer.finalize()?;
+    Ok(())
+}
+
+pub fn encode_mp3(track: &Track, path: &Path, kbps: Option<u32>) -> Result<(), IOError> {
+    if track.buffer().is_empty() {
+        return Err(IOError::InvalidData);
+    }
+
+    let channels = track.channels();
+    let sample_rate = track.sample_rate();
+
+    let mut encoder = mp3lame_encoder::Builder::new()
+        .ok_or(IOError::EncodingFailed)?
+        .with_num_channels(channels as u8)
+        .map_err(|_| IOError::EncodingFailed)?
+        .with_sample_rate(sample_rate)
+        .map_err(|_| IOError::EncodingFailed)?
+        .with_brate(match kbps.unwrap_or(192) {
+            128 => mp3lame_encoder::Bitrate::Kbps128,
+            160 => mp3lame_encoder::Bitrate::Kbps160,
+            192 => mp3lame_encoder::Bitrate::Kbps192,
+            256 => mp3lame_encoder::Bitrate::Kbps256,
+            320 => mp3lame_encoder::Bitrate::Kbps320,
+            _ => mp3lame_encoder::Bitrate::Kbps192,
+        })
+        .map_err(|_| IOError::EncodingFailed)?
+        .with_quality(mp3lame_encoder::Quality::Best)
+        .map_err(|_| IOError::EncodingFailed)?
+        .build()
+        .map_err(|_| IOError::EncodingFailed)?;
+
+    let n_ch = channels as usize;
+    let mut channel_samples: Vec<Vec<i16>> = vec![Vec::new(); n_ch];
+
+    for frame in track.buffer() {
+        let n_samples = frame.data.first().map_or(0, |ch| ch.len());
+        for i in 0..n_samples {
+            for ch_idx in 0..n_ch {
+                let s = frame.data.get(ch_idx).and_then(|c| c.get(i)).copied().unwrap_or(0.0);
+                let pcm = (s.clamp(-1.0, 1.0) * i16::MAX as f32) as i16;
+                channel_samples[ch_idx].push(pcm);
+            }
+        }
+    }
+
+    let sample_count = channel_samples.first().map_or(0, |c| c.len());
+    let mut mp3_out = Vec::new();
+    mp3_out.reserve(mp3lame_encoder::max_required_buffer_size(sample_count));
+
+    if n_ch == 1 {
+        let input = mp3lame_encoder::MonoPcm(&channel_samples[0]);
+        let encoded_size = encoder
+            .encode(input, mp3_out.spare_capacity_mut())
+            .map_err(|_| IOError::EncodingFailed)?;
+        unsafe {
+            let new_len = mp3_out.len() + encoded_size;
+            mp3_out.set_len(new_len);
+        }
+    } else {
+        let dummy = vec![0i16; sample_count];
+        let right = if n_ch > 1 {
+            &channel_samples[1]
+        } else {
+            &dummy
+        };
+        let input = mp3lame_encoder::DualPcm {
+            left: &channel_samples[0],
+            right,
+        };
+        let encoded_size = encoder
+            .encode(input, mp3_out.spare_capacity_mut())
+            .map_err(|_| IOError::EncodingFailed)?;
+        unsafe {
+            let new_len = mp3_out.len() + encoded_size;
+            mp3_out.set_len(new_len);
+        }
+    }
+
+    let flush_size = encoder
+        .flush::<mp3lame_encoder::FlushNoGap>(mp3_out.spare_capacity_mut())
+        .map_err(|_| IOError::EncodingFailed)?;
+    unsafe {
+        let new_len = mp3_out.len() + flush_size;
+        mp3_out.set_len(new_len);
+    }
+
+    std::fs::write(path, &mp3_out).map_err(|_| IOError::EncodingFailed)?;
     Ok(())
 }

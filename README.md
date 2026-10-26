@@ -18,7 +18,7 @@ page.
 
 ## Windows
 
-1.  Download DriveLang-v1.0.0-Windows.zip.
+1.  Download the latest Windows archive from the Releases page.
 2.  Extract the archive.
 3.  Open a terminal in the extracted folder.
 4.  Run:
@@ -48,11 +48,12 @@ Extract the archive and run:
     GUIDE.md
     examples/
     stdlib/
+    Outputs/
      LICENSE
 
--   GUIDE.md contains the complete language documentation.
+-   GUIDE.md contains the complete language documentation and practical guide.
 -   examples/ contains sample DriveLang programs.
-> Do not forget to change the Path in the Examples or they will Not Execute.
+-   The examples use the bundled sample image and write results to `Outputs/`.
 -   stdlib/ contains the standard library included with DriveLang.
 
 ------------------------------------------------------------------------
@@ -61,7 +62,7 @@ Extract the archive and run:
 
 - Run the included example:
 
-    `drive examples/hello.drive`
+    `drive run examples/hello.drive`
 
 - Or create a new file:
 - ```

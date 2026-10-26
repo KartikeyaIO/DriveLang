@@ -2,7 +2,9 @@
 // A complete example combining imports, custom filters, kernels,
 // audio processing, compositing, and export.
 
-import "filters/my_filters.drive";
+import std::color;
+import std::kernels;
+import std::audio;
 
 kernel emboss = [
     [-2, -1,  0],
@@ -27,16 +29,16 @@ filter hue_rotate(angle) {
     b = clamp(nb, 0, 255);
 }
 
-af normalize_audio() {
-    let peak = max(abs(l), abs(r));
-    l = l / peak;
-    r = r / peak;
+af soft_chime(freq) {
+    let sample = sin(6.2831853 * freq * time) * 0.25;
+    l = sample;
+    r = sample;
 }
 
 // --- Image pipeline ---
-base   = frame("hero.png");
-badge  = frame("badge.png") -> resize(80, 80);
-label  = text("Editron v1", "fonts/Mono.ttf", 24, 200, 200, 200);
+base   = frame("examples/bw_high_contrast.png") -> resize(1280, 720);
+badge  = frame("examples/bw_high_contrast.png") -> resize(80, 80);
+label  = text("DriveLang", "examples/georgia.ttf", 24, 200, 200, 200);
 
 result = base
     -> hue_rotate(0.5)
@@ -46,10 +48,14 @@ result = base
     -> blend(16, 110, label, 1.0)
     -> crop(0, 0, 1280, 720);
 
-export(result, "final.png");
+export(result, "Outputs/full_pipeline.png");
 
 // --- Audio pipeline ---
-sfx = track("ambient.flac") -> normalize_audio();
-export(sfx, "ambient_normalized.wav");
+sfx = silence(1.5, 44100, 2)
+    -> soft_chime(660)
+    -> hard_clip(0.8)
+    -> fade_in(0.2)
+    -> fade_out(0.3);
+export(sfx, "Outputs/full_pipeline_audio.wav");
 
 print("Done.");

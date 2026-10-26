@@ -21,6 +21,8 @@ pub enum TokenKind {
     Int,
     Float,
     String,
+    /// F-string token: value holds the raw template content including {} placeholders.
+    FString,
     LeftParen,
     RightParen,
     LeftBrace,
@@ -40,6 +42,8 @@ pub enum TokenKind {
     For,
     LoadTrack,
     LoadFrame,
+    /// folder("path") — produces a Folder value
+    LoadFolder,
     Filter,
     Export,
     LeftBracket,
@@ -64,6 +68,8 @@ pub enum TokenKind {
     Blank,
     Silence,
     Kernel,
+    Fn,
+    Return,
     EOF,
 }
 
@@ -73,6 +79,8 @@ pub enum State {
     Default,
     Identifier,
     String,
+    /// FString state — we are inside an f"..." literal, tracking brace nesting
+    FString { depth: usize },
     Number,
     Comment,
 }
@@ -95,6 +103,12 @@ pub enum LexError {
         line: usize,
         message: String,
     }, // The Invalid Number Error Tells the user the number is invalid
+
+    /// An unrecognised escape sequence like `\z` inside a string literal.
+    InvalidEscape {
+        ch: char,
+        line: usize,
+    },
 }
 
 impl fmt::Display for LexError {
@@ -112,6 +126,9 @@ impl fmt::Display for LexError {
                 message,
             } => {
                 write!(f, "line: {line}, '{value}' {message}")
+            }
+            LexError::InvalidEscape { ch, line } => {
+                write!(f, "line: {line}, invalid escape sequence '\\{ch}'")
             }
         }
     }
@@ -140,6 +157,7 @@ fn identify_token(s: &str) -> TokenKind {
     match s {
         "frame" => TokenKind::LoadFrame,
         "track" => TokenKind::LoadTrack,
+        "folder" => TokenKind::LoadFolder,
         "filter" => TokenKind::Filter,
         "export" => TokenKind::Export,
         "import" => TokenKind::Import,
@@ -158,8 +176,24 @@ fn identify_token(s: &str) -> TokenKind {
         "not" => TokenKind::Not,
         "let" => TokenKind::Let,
         "print" => TokenKind::Print,
+        "fn" => TokenKind::Fn,
+        "return" => TokenKind::Return,
         // "effect" => TokenKind::Effect,
         _ => TokenKind::Identifier,
+    }
+}
+
+/// Decode a backslash escape. Returns the decoded character or an error.
+fn decode_escape(ch: char, line: usize) -> Result<char, LexError> {
+    match ch {
+        'n' => Ok('\n'),
+        't' => Ok('\t'),
+        'r' => Ok('\r'),
+        '\\' => Ok('\\'),
+        '"' => Ok('"'),
+        '0' => Ok('\0'),
+        '\'' => Ok('\''),
+        other => Err(LexError::InvalidEscape { ch: other, line }),
     }
 }
 
@@ -173,6 +207,8 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
 
     let mut state = State::Default;
     let mut buffer = String::new();
+    // Whether we entered String/FString state with an f-prefix (so emit FString token)
+    let mut is_fstring = false;
 
     while i < len {
         let c = bytes[i] as char;
@@ -188,16 +224,26 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
                     i += 1;
                 }
 
+                // Regular string literal: "..."
                 '"' => {
                     buffer.clear();
+                    is_fstring = false;
                     state = State::String;
                     i += 1;
                 }
                 c if c.is_ascii_alphabetic() || c == '_' => {
-                    buffer.clear();
-                    buffer.push(c);
-                    state = State::Identifier;
-                    i += 1;
+                    // Check for f-string prefix: f"..."
+                    if c == 'f' && i + 1 < len && bytes[i + 1] as char == '"' {
+                        buffer.clear();
+                        is_fstring = true;
+                        state = State::FString { depth: 0 };
+                        i += 2; // skip 'f' and opening '"'
+                    } else {
+                        buffer.clear();
+                        buffer.push(c);
+                        state = State::Identifier;
+                        i += 1;
+                    }
                 }
                 c if c.is_ascii_digit() => {
                     buffer.clear();
@@ -371,15 +417,36 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
                 }
             }
 
+            // ── Regular string with escape-sequence support ──────────────────
             State::String => {
                 if c == '"' {
+                    // Closing quote: emit the token
+                    let kind = if is_fstring {
+                        TokenKind::FString
+                    } else {
+                        TokenKind::String
+                    };
                     tokens.push(Token {
-                        kind: TokenKind::String,
+                        kind,
                         value: buffer.clone(),
                         line,
                     });
                     buffer.clear();
+                    is_fstring = false;
                     state = State::Default;
+                    i += 1;
+                } else if c == '\\' {
+                    // Escape sequence
+                    i += 1;
+                    if i >= len {
+                        return Err(LexError::UnterminatedString {
+                            line,
+                            message: "String ended with an incomplete escape sequence".to_string(),
+                        });
+                    }
+                    let escaped = bytes[i] as char;
+                    let decoded = decode_escape(escaped, line)?;
+                    buffer.push(decoded);
                     i += 1;
                 } else {
                     if c == '\n' {
@@ -389,6 +456,60 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
                     i += 1;
                 }
             }
+
+            // ── F-string lexing: f"literal {expr} more literal" ─────────────
+            // We store the ENTIRE raw content including {} so the engine can
+            // sub-parse expression parts at runtime.
+            State::FString { ref mut depth } => {
+                if c == '"' && *depth == 0 {
+                    // Closing quote of the f-string
+                    tokens.push(Token {
+                        kind: TokenKind::FString,
+                        value: buffer.clone(),
+                        line,
+                    });
+                    buffer.clear();
+                    state = State::Default;
+                    i += 1;
+                } else if c == '{' {
+                    *depth += 1;
+                    buffer.push(c);
+                    i += 1;
+                } else if c == '}' {
+                    if *depth > 0 {
+                        *depth -= 1;
+                    }
+                    buffer.push(c);
+                    i += 1;
+                } else if c == '\\' {
+                    // Escape sequences inside f-strings too
+                    i += 1;
+                    if i >= len {
+                        return Err(LexError::UnterminatedString {
+                            line,
+                            message: "F-string ended with an incomplete escape sequence"
+                                .to_string(),
+                        });
+                    }
+                    let escaped = bytes[i] as char;
+                    // Inside {}, treat \ literally (part of the sub-expression)
+                    if *depth > 0 {
+                        buffer.push('\\');
+                        buffer.push(escaped);
+                    } else {
+                        let decoded = decode_escape(escaped, line)?;
+                        buffer.push(decoded);
+                    }
+                    i += 1;
+                } else {
+                    if c == '\n' {
+                        line += 1;
+                    }
+                    buffer.push(c);
+                    i += 1;
+                }
+            }
+
             State::Number => {
                 if c.is_ascii_digit() {
                     buffer.push(c);
@@ -439,7 +560,7 @@ pub fn lexer(source: &str) -> Result<Vec<Token>, LexError> {
         }
     }
     match state {
-        State::String => {
+        State::String | State::FString { .. } => {
             return Err(LexError::UnterminatedString {
                 line,
                 message: "The string was never terminated!".to_string(),
@@ -542,5 +663,25 @@ mod tests {
                 TokenKind::EOF
             ]
         );
+    }
+
+    #[test]
+    fn lex_escape_sequences() {
+        let toks = lexer(r#""hello\nworld\t!""#).unwrap();
+        assert_eq!(toks[0].kind, TokenKind::String);
+        assert_eq!(toks[0].value, "hello\nworld\t!");
+    }
+
+    #[test]
+    fn lex_fstring_basic() {
+        let toks = lexer(r#"f"hello {name}!""#).unwrap();
+        assert_eq!(toks[0].kind, TokenKind::FString);
+        assert_eq!(toks[0].value, "hello {name}!");
+    }
+
+    #[test]
+    fn lex_folder_keyword() {
+        let toks = lexer("folder(\"path\")").unwrap();
+        assert_eq!(toks[0].kind, TokenKind::LoadFolder);
     }
 }

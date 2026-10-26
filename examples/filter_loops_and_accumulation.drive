@@ -1,0 +1,48 @@
+// examples/filter_loops_and_accumulation.drive
+// Demonstrates:
+// 1. Feature 12: Loops inside filter expressions (compile-time unrolled loops)
+// 2. Feature 11: Accessing loop variable passed into filter parameters
+// 3. Feature 4: Looped filter application and looped exports
+// 4. Feature 6: Formatted strings with :04 zero padding
+// 5. Feature 8: Mathematical functions inside filters (mod, clamp)
+
+// Filter with compile-time loop inside!
+// The inner loop unrolls during channel bytecode compilation,
+// allowing iterative accumulation per pixel without kernel convolving.
+filter procedural_pattern(step_offset) {
+    let acc_r = 0;
+    let acc_b = 0;
+
+    // Feature 12: Loop inside filter body (unrolled at compile-time)
+    for i in 1..4 {
+        // Accumulate harmonic offsets
+        acc_r = acc_r + i * 15;
+        acc_b = acc_b + (4 - i) * 12;
+    }
+
+    // Feature 8 & 11: Mathematical functions (mod, clamp) and loop parameter step_offset
+    let wave_x = mod(x + step_offset * 10, 32);
+    let wave_y = mod(y + step_offset * 10, 32);
+
+    r = clamp(r + acc_r + wave_x * 2, 0, 255);
+    g = clamp(g + wave_y * 3, 0, 255);
+    b = clamp(b + acc_b, 0, 255);
+}
+
+print("=== Loops Inside Filters & Parametric Generation Demo ===\n\n");
+
+canvas = blank(128, 128);
+
+// Feature 4: Looped exports and filter application
+// Feature 11: Loop variable 't' accessed as filter argument
+print("Rendering animation frames with inner filter loops:\n");
+for t in 0..4 {
+    rendered = canvas -> procedural_pattern(t);
+
+    // Feature 6: Formatted strings with zero-padding
+    path = f"Outputs/accum_pattern_{t:04}.png";
+    print(f"\tRendered frame {t} -> {path}\n");
+    export(rendered, path);
+}
+
+print("\nFilter loops and parametric batch export finished successfully!\n");

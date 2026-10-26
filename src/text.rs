@@ -122,9 +122,12 @@ impl Text {
                             b_buf[idx] = (color.b() as f32 * alpha) as u8;
                         }
                         Color::RGBA(_, _, _, _) => {
-                            r_buf[idx] = (color.r() as f32 * alpha) as u8;
-                            g_buf[idx] = (color.g() as f32 * alpha) as u8;
-                            b_buf[idx] = (color.b() as f32 * alpha) as u8;
+                            // Store straight RGBA. Coverage belongs in the alpha
+                            // channel; premultiplying RGB here would darken
+                            // antialiased glyph edges when composited later.
+                            r_buf[idx] = color.r();
+                            g_buf[idx] = color.g();
+                            b_buf[idx] = color.b();
                             a_buf[idx] = coverage;
                         }
                     }

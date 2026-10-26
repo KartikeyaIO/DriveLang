@@ -21,7 +21,7 @@
 //      2.0 = double volume
 
 
-af gain(amount) {
+af linear_gain(amount) {
     l = l * amount;
     r = r * amount;
 }
@@ -195,7 +195,7 @@ af ring(freq) {
 // duration: Fade length in seconds.
 // Recommended:    0.5 - 10.0
 
-af fade_in(duration) {
+af sample_fade_in(duration) {
 
     let t = clamp(time / duration, 0, 1);
 
