@@ -177,6 +177,7 @@ pub struct Frame {
     width: u32,
     height: u32,
     data: PixelData,
+    source_name: Option<String>,
 }
 
 #[derive(Debug)]
@@ -302,8 +303,8 @@ impl Frame {
             Ok(Self {
                 width,
                 height,
-
                 data,
+                source_name: None,
             })
         } else {
             Err(FrameError::InvalidFrameSize)
@@ -349,6 +350,12 @@ impl Frame {
     }
     pub fn data_mut(&mut self) -> &mut PixelData {
         &mut self.data
+    }
+    pub fn source_name(&self) -> Option<&str> {
+        self.source_name.as_deref()
+    }
+    pub fn set_source_name(&mut self, name: String) {
+        self.source_name = Some(name);
     }
 }
 impl Frame {
@@ -637,6 +644,7 @@ impl Frame {
                 vec![0u8; len],
                 vec![255u8; len],
             ),
+            source_name: None,
         }
     }
     pub fn crop(&self, x: u32, y: u32, width: u32, height: u32) -> Result<Frame, FrameError> {

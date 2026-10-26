@@ -1,0 +1,48 @@
+// examples/folder_batch_processing.drive
+// Demonstrates:
+// 1. Feature 3: Folder type, automatic image-only filtering, folder[name], folder.len()
+// 2. Feature 4: Looped exports and looped filter application
+// 3. Feature 5: Escape sequences (\n, \t, etc.)
+// 4. Feature 6: Formatted strings with :04 zero padding and metadata access
+// 5. Feature 11: Passing loop variable into filter inside loops
+
+filter adjust_tint(step_index) {
+    // step_index is passed from the active loop
+    let shift = step_index * 15;
+    r = clamp(r + shift, 0, 255);
+    b = clamp(b - shift * 0.5, 0, 255);
+}
+
+// 1. Load the examples directory as a Folder
+// Folder scans the path and automatically filters ONLY image files (.png, .jpg, etc.),
+// ignoring scripts (.drive), fonts (.ttf), and text files.
+dir = folder("examples");
+
+print("=== Folder Batch Processing Demo ===\n");
+print(f"Total image files detected in 'examples/': {dir.len()}\n\n");
+
+// 2. Direct random access by file name:
+single_image = dir["bw_high_contrast.png"];
+print(f"Loaded specific image: {single_image.name} ({single_image.width}x{single_image.height})\n");
+
+// 3. Looped filter application and export using range loop with loop variable access:
+print("Generating parametric sequence from image:\n");
+for i in 0..3 {
+    // Feature 11: Using loop variable 'i' inside the filter pipeline call
+    tinted = single_image -> adjust_tint(i) -> blur(1);
+
+    // Feature 4 & 6: Looped export with zero-padded format string
+    export_path = f"Outputs/batch_out_{i:04}.png";
+    print(f"\tExporting iteration {i} -> {export_path}\n");
+    export(tinted, export_path);
+}
+
+// 4. Looped iteration directly over all images in the folder:
+print("\nIterating directly over all images in folder:\n");
+counter = 0;
+for photo in dir {
+    counter = counter + 1;
+    print(f"\tProcessing #{counter}: {photo.name} [{photo.width}x{photo.height}]\n");
+}
+
+print("\nBatch folder operations completed successfully!\n");

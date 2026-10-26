@@ -2,7 +2,8 @@
 // A complete example combining imports, custom filters, kernels,
 // audio processing, compositing, and export.
 
-import "filters/my_filters.drive";
+import std::color;
+import std::kernels;
 
 kernel emboss = [
     [-2, -1,  0],
@@ -28,15 +29,15 @@ filter hue_rotate(angle) {
 }
 
 af normalize_audio() {
-    let peak = max(abs(l), abs(r));
+    let peak = max(max(abs(l), abs(r)), 0.000001);
     l = l / peak;
     r = r / peak;
 }
 
 // --- Image pipeline ---
-base   = frame("hero.png");
-badge  = frame("badge.png") -> resize(80, 80);
-label  = text("Editron v1", "fonts/Mono.ttf", 24, 200, 200, 200);
+base   = frame("input_image.jpg") -> resize(1280, 720);
+badge  = frame("examples/bw_high_contrast.png") -> resize(80, 80);
+label  = text("DriveLang", "examples/georgia.ttf", 24, 200, 200, 200);
 
 result = base
     -> hue_rotate(0.5)
@@ -46,10 +47,10 @@ result = base
     -> blend(16, 110, label, 1.0)
     -> crop(0, 0, 1280, 720);
 
-export(result, "final.png");
+export(result, "Outputs/full_pipeline.png");
 
 // --- Audio pipeline ---
-sfx = track("ambient.flac") -> normalize_audio();
-export(sfx, "ambient_normalized.wav");
+sfx = track("test_inputs/shankh.mp3") -> normalize_audio();
+export(sfx, "Outputs/ambient_normalized.wav");
 
 print("Done.");

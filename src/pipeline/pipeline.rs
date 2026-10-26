@@ -81,6 +81,10 @@ pub enum AudioOperation {
         params: Vec<f32>,
     },
     Gain(f32),
+    FadeIn(f64),
+    FadeOut(f64),
+    Reverse,
+    Speed(f64),
 }
 
 impl AudioPipeline {
@@ -117,6 +121,20 @@ impl AudioPipeline {
                 }
 
                 AudioOperation::Gain(db) => track.gain(*db),
+                AudioOperation::FadeIn(duration_s) => {
+                    let ts = crate::media::video::TimeStamp::from_seconds(*duration_s, 1, track.sample_rate());
+                    track.fade_in(ts);
+                }
+                AudioOperation::FadeOut(duration_s) => {
+                    let ts = crate::media::video::TimeStamp::from_seconds(*duration_s, 1, track.sample_rate());
+                    track.fade_out(ts);
+                }
+                AudioOperation::Reverse => {
+                    *track = track.reverse();
+                }
+                AudioOperation::Speed(factor) => {
+                    *track = track.speed(*factor);
+                }
             }
         }
         Ok(())

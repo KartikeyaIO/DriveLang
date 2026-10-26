@@ -15,3 +15,4 @@ image = "0.25.10"
 mp4 = "0.14.0"
 openh264 = "0.9.3"
 symphonia = { version = "0.5", features = ["all"] }
+mp3lame-encoder = "0.2"

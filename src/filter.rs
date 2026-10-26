@@ -120,6 +120,7 @@ pub enum Instruction {
     Asin,
     Acos,
     Atan,
+    Atan2,
 
     Sqrt,
     Exp,
@@ -453,6 +454,12 @@ impl FilterVM {
                 Instruction::Atan => {
                     let x = { self.pop().atan() };
                     self.push(x);
+                }
+
+                Instruction::Atan2 => {
+                    let x = self.pop();
+                    let y = self.pop();
+                    self.push(y.atan2(x));
                 }
 
                 // -------------------------

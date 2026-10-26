@@ -87,9 +87,11 @@ filter cyanotype() {
 
 // Converts to a high-contrast monochrome image
 filter noir() {
-    r = (((r + g + b) / 3 - 128) * 2.0) + 128;
-    g = (((r + g + b) / 3 - 128) * 2.0) + 128;
-    b = (((r + g + b) / 3 - 128) * 2.0) + 128;
+    let gray = (r + g + b) / 3;
+    let value = clamp(((gray - 128) * 2.0) + 128, 0, 255);
+    r = value;
+    g = value;
+    b = value;
 }
 
 

@@ -1,0 +1,69 @@
+// examples/audio_composition_mp3.drive
+// Demonstrates:
+// 1. Feature 9: Native MP3 export (pure Rust, no FFmpeg) via export() and export_mp3()
+// 2. Feature 10: Rich audio manipulation: merge, slice, concat, channel_split,
+//                and pipeline stages: reverse(), speed(), fade_in(), fade_out()
+// 3. Feature 7: if / elif / else inside audio filters (af)
+// 4. Feature 8: Math built-ins inside af (sin, abs, etc.)
+import std::audio;
+
+// Audio synthesizer filter with multi-branch thresholding
+af tone_synth(freq) {
+    // Generate a sine wave tone
+    let wave = sin(2.0 * 3.14159265 * freq * time) * 0.4;
+
+    // Feature 7 & 8: if / elif / else with math built-in abs() inside audio filter
+    if abs(wave) < 0.05 {
+        // Soft noise gate
+        l = 0.0;
+        r = 0.0;
+    } elif abs(wave) < 0.25 {
+        // Soft compression zone
+        l = wave * 0.9;
+        r = wave * 0.9;
+    } else {
+        l = wave;
+        r = wave;
+    }
+}
+
+print("=== Native Audio Composition & MP3 Demo ===\n\n");
+
+// 1. Create two 1-second audio tracks synthesized at 440 Hz (A4) and 660 Hz (E5)
+print("Synthesizing audio tracks...\n");
+base_a = silence(1.0, 44100, 2);
+t1 = base_a -> tone_synth(440.0) -> hard_clip(0.9) -> linear_gain(0.8) -> sample_fade_in(0.2);
+
+base_b = silence(1.0, 44100, 2);
+t2 = base_b -> tone_synth(660.0) -> hard_clip(0.9);
+
+// 2. Feature 10: Audio built-ins
+// Merge: Mix both audio tracks simultaneously (A4 + E5 chord)
+mixed = merge(t1, t2);
+print("Merged two tracks (chord mix).\n");
+
+// Slice: Cut a 0.5-second section from 0.2s to 0.7s
+clipped = slice(mixed, 0.2, 0.7);
+print("Sliced 0.5s segment from mixed track.\n");
+
+// Concat: Chain tracks sequentially end-to-end
+song = concat(clipped, t1);
+print("Concatenated sliced segment and track 1 sequentially.\n");
+
+// Channel Split: Extract left channel as a mono track
+mono_l = channel_split(song, 0);
+print("Extracted left channel into a separate mono track.\n");
+
+// 3. Feature 10: Pipeline audio operations (reverse, speed, fade_in, fade_out)
+print("Applying audio pipeline: reverse -> speed(1.2) -> fade_in(0.1s) -> fade_out(0.1s)...\n");
+finished = song -> reverse() -> speed(1.2) -> fade_in(0.1) -> fade_out(0.1);
+
+// 4. Feature 9: Native MP3 Export (pure Rust, zero FFmpeg required)
+print("Exporting native MP3 files (no FFmpeg needed)...\n");
+// Inferred format via .mp3 extension (default 192 kbps):
+export(finished, "Outputs/native_rendered.mp3");
+
+// Explicit MP3 export with custom bitrate (320 kbps):
+export_mp3(finished, "Outputs/native_rendered_320kbps.mp3", 320);
+
+print("Native MP3 audio exported successfully!\n");

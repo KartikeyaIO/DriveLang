@@ -20,7 +20,7 @@ filter vignette(strength) {
     b = b * factor;
 }
 
-img = frame("scene.png");
+img = frame("input_image.jpg");
 
 // Only tint pixels in x: 100..400, y: 50..300
 tinted = img -> redtint()[100..400, 50..300];
@@ -28,4 +28,4 @@ tinted = img -> redtint()[100..400, 50..300];
 // Vignette covers the whole frame
 result = tinted -> vignette(0.7);
 
-export(result, "masked_output.png");
+export(result, "Outputs/masked_output.png");

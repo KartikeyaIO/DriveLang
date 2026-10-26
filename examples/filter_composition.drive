@@ -1,0 +1,62 @@
+// examples/filter_composition.drive
+// Demonstrates:
+// 1. Feature 1: Filter composition (calling other declared filters inside filters)
+// 2. Feature 7: if / elif / else inside filter bodies
+// 3. Feature 8: Mathematical functions called from inside filters (sin, sqrt, min, clamp)
+
+// Base filter: Adjusts brightness across all color channels
+filter base_brighten(amount) {
+    r = clamp(r + amount, 0, 255);
+    g = clamp(g + amount, 0, 255);
+    b = clamp(b + amount, 0, 255);
+}
+
+// Sub-filter: Applies a color tint based on luminance threshold using if / elif / else
+filter tone_classify(threshold) {
+    let luma = 0.299 * r + 0.587 * g + 0.114 * b;
+    if luma < threshold * 0.5 {
+        // Deep shadow: tint cool blue
+        r = r * 0.8;
+        b = clamp(b + 30, 0, 255);
+    } elif luma < threshold {
+        // Midtone: warm golden tint
+        r = clamp(r + 20, 0, 255);
+        g = clamp(g + 10, 0, 255);
+    } else {
+        // Highlight: soft highlight boost
+        r = clamp(r + 15, 0, 255);
+        g = clamp(g + 15, 0, 255);
+        b = clamp(b + 10, 0, 255);
+    }
+}
+
+// Composed filter: Calls base_brighten and tone_classify directly inside its body!
+filter photo_grade(boost, thresh) {
+    // 1. Call base_brighten inline like a function call
+    base_brighten(boost);
+
+    // 2. Call tone_classify inline
+    tone_classify(thresh);
+
+    // 3. Apply radial vignette math inside the filter using sqrt, min, and clamp
+    let cx = width / 2;
+    let cy = height / 2;
+    let dist = sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy));
+    let max_dist = sqrt(cx * cx + cy * cy);
+    let falloff = 1.0 - min(dist / max_dist, 1.0) * 0.4;
+
+    r = clamp(r * falloff, 0, 255);
+    g = clamp(g * falloff, 0, 255);
+    b = clamp(b * falloff, 0, 255);
+}
+
+// Create a blank canvas with initial base color
+canvas = blank(256, 256);
+
+// Apply the composed filter through the pipeline
+graded = canvas -> photo_grade(50, 128);
+
+// Print status using escape sequences and formatted strings
+print("Successfully rendered composed filter: \n\tWidth: {}\n\tHeight: {}\n", graded.width, graded.height);
+
+export(graded, "Outputs/graded_output.png");

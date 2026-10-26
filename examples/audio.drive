@@ -2,8 +2,7 @@
 // Load an audio track, apply a custom audio filter, adjust gain, export as WAV.
 
 af lowpass(cutoff) {
-    // Simple one-pole low-pass approximation using lerp.
-    // cutoff is a blend factor between 0 (silence) and 1 (dry signal).
+    // Simple sample attenuation example; this is not a frequency-domain low-pass filter.
     l = lerp(0, l, cutoff);
     r = lerp(0, r, cutoff);
 }
@@ -16,9 +15,9 @@ af boost_bass(amount) {
     r = clamp(r + bass, -1, 1);
 }
 
-music = track("song.mp3");
+music = track("test_inputs/shankh.mp3");
 
 // Apply low-pass then a gentle bass boost
-processed = music -> lowpass(0.6) -> boost_bass(0.05);
+processed = music -> lowpass(0.6) -> boost_bass(0.05) -> gain(-3);
 
-export(processed, "processed.wav");
+export(processed, "Outputs/audio_processed.wav");

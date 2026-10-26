@@ -14,8 +14,8 @@ filter contrast(factor) {
     b = clamp(128 + factor * (b - 128), 0, 255);
 }
 
-img = frame("../input_image.jpg");
+img = frame("input_image.jpg");
 
 result = img -> grayscale() -> contrast(1.8);
 
-export(result, "bw_high_contrast.png");
+export(result, "Outputs/grayscale_contrast.png");

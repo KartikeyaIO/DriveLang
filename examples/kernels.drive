@@ -7,7 +7,7 @@ kernel sharpen = [
     [ 0, -1,  0]
 ];
 
-img = frame("landscape.png");
+img = frame("input_image.jpg");
 
 // Apply custom sharpen kernel
 sharpened = img -> sharpen();
@@ -15,5 +15,5 @@ sharpened = img -> sharpen();
 // Apply a dynamic box-blur of radius 9 (generated at runtime)
 blurred = img -> blur(9);
 
-export(sharpened, "sharpened.png");
-export(blurred, "blurred.png");
+export(sharpened, "Outputs/sharpened.png");
+export(blurred, "Outputs/blurred.png");

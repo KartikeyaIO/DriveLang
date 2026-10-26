@@ -27,7 +27,7 @@ filter channel_swap(mode) {
     }
 }
 
-img = frame("input.png");
+img = frame("input_image.jpg");
 
 quality = 1;
 
@@ -37,4 +37,4 @@ if quality == 1 {
     result = img -> threshold(128);
 }
 
-export(result, "thresholded.png");
+export(result, "Outputs/conditionals.png");

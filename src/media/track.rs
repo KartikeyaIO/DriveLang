@@ -18,6 +18,18 @@ pub enum TrackError {
     MixingIsNotPossible,
 }
 
+impl std::fmt::Display for TrackError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TrackError::MixingIsNotPossible => {
+                write!(f, "Mixing is not possible: sample rates or channels do not match")
+            }
+        }
+    }
+}
+
+impl std::error::Error for TrackError {}
+
 // ── Constructors & Accessors ─────────────────────────────────────────────────
 
 impl Track {
@@ -274,3 +286,231 @@ impl Track {
         last.time.add(frame_duration)
     }
 }
+
+// ── Feature 10: Additional audio manipulation methods ────────────────────────
+impl Track {
+    /// Reverse the entire track in place (sample-level reversal within each frame,
+    /// then reverse the frame order).
+    pub fn reverse(&self) -> Self {
+        // Collect all samples per channel
+        let n_ch = self.channels as usize;
+        let mut all_samples: Vec<Vec<f32>> = vec![Vec::new(); n_ch];
+
+        for frame in &self.buffer {
+            for (ch_idx, ch) in frame.data.iter().enumerate() {
+                if ch_idx < n_ch {
+                    all_samples[ch_idx].extend_from_slice(ch);
+                }
+            }
+        }
+
+        // Reverse each channel
+        for ch in &mut all_samples {
+            ch.reverse();
+        }
+
+        // Re-pack into frames of the same sizes as originals (but reversed order)
+        const FRAME_SIZE: usize = 1024;
+        let total_samples = all_samples.first().map_or(0, |c| c.len());
+        let mut out_buffer = Vec::new();
+        let mut offset = 0usize;
+        let mut ts = if let Some(first) = self.buffer.first() {
+            TimeStamp::zero_like(first.time)
+        } else {
+            TimeStamp::default()
+        };
+
+        while offset < total_samples {
+            let end = (offset + FRAME_SIZE).min(total_samples);
+            let data: Vec<Vec<f32>> = all_samples
+                .iter()
+                .map(|ch| ch[offset..end].to_vec())
+                .collect();
+            out_buffer.push(AudioFrame { time: ts, data });
+            let dt = (end - offset) as f64 / self.sample_rate as f64;
+            if let Some(f) = self.buffer.first() {
+                ts = ts.add(TimeStamp::from_seconds(dt, f.time.num, f.time.den));
+            }
+            offset = end;
+        }
+
+        Track::new(self.sample_rate, self.channels, out_buffer)
+    }
+
+    /// Change playback speed by `factor` (>1 speeds up, <1 slows down).
+    /// Uses linear interpolation for quality resampling.
+    pub fn speed(&self, factor: f64) -> Self {
+        if factor <= 0.0 {
+            return Track::new(self.sample_rate, self.channels, vec![]);
+        }
+
+        let n_ch = self.channels as usize;
+        let mut all_samples: Vec<Vec<f32>> = vec![Vec::new(); n_ch];
+        for frame in &self.buffer {
+            for (ch_idx, ch) in frame.data.iter().enumerate() {
+                if ch_idx < n_ch {
+                    all_samples[ch_idx].extend_from_slice(ch);
+                }
+            }
+        }
+
+        let original_len = all_samples.first().map_or(0, |c| c.len());
+        let new_len = (original_len as f64 / factor).round() as usize;
+
+        let mut resampled: Vec<Vec<f32>> = vec![Vec::with_capacity(new_len); n_ch];
+        for out_i in 0..new_len {
+            let src_pos = out_i as f64 * factor;
+            let src_i = src_pos.floor() as usize;
+            let frac = (src_pos - src_i as f64) as f32;
+            for (ch_idx, ch) in all_samples.iter().enumerate() {
+                let a = ch.get(src_i).copied().unwrap_or(0.0);
+                let b = ch.get(src_i + 1).copied().unwrap_or(a);
+                resampled[ch_idx].push(a + frac * (b - a));
+            }
+        }
+
+        // Pack into frames
+        const FRAME_SIZE: usize = 1024;
+        let mut out_buffer = Vec::new();
+        let mut offset = 0usize;
+        let mut ts = if let Some(f) = self.buffer.first() {
+            TimeStamp::zero_like(f.time)
+        } else {
+            TimeStamp::default()
+        };
+
+        while offset < new_len {
+            let end = (offset + FRAME_SIZE).min(new_len);
+            let data: Vec<Vec<f32>> = resampled
+                .iter()
+                .map(|ch| ch[offset..end].to_vec())
+                .collect();
+            out_buffer.push(AudioFrame { time: ts, data });
+            let dt = (end - offset) as f64 / self.sample_rate as f64;
+            if let Some(f) = self.buffer.first() {
+                ts = ts.add(TimeStamp::from_seconds(dt, f.time.num, f.time.den));
+            }
+            offset = end;
+        }
+
+        Track::new(self.sample_rate, self.channels, out_buffer)
+    }
+
+    /// Concatenate multiple tracks sequentially. All must have the same sample
+    /// rate and channel count.
+    pub fn concat_tracks(tracks: &[&Track]) -> Result<Track, TrackError> {
+        if tracks.is_empty() {
+            return Ok(Track::new(44100, 2, vec![]));
+        }
+        let sr = tracks[0].sample_rate;
+        let ch = tracks[0].channels;
+        for t in tracks.iter().skip(1) {
+            if t.sample_rate != sr || t.channels != ch {
+                return Err(TrackError::MixingIsNotPossible);
+            }
+        }
+        let mut merged = Track::new(sr, ch, vec![]);
+        for t in tracks {
+            merged = Track::merge(&merged, t)?;
+        }
+        Ok(merged)
+    }
+
+    /// Extract a single audio channel as a mono track.
+    /// `channel_index` is 0-based (0 = left, 1 = right, etc.).
+    pub fn channel_split(&self, channel_index: usize) -> Self {
+        let buffer = self
+            .buffer
+            .iter()
+            .map(|frame| {
+                let ch_data = frame
+                    .data
+                    .get(channel_index)
+                    .cloned()
+                    .unwrap_or_else(|| vec![0.0; frame.data.first().map_or(0, |c| c.len())]);
+                AudioFrame {
+                    time: frame.time,
+                    data: vec![ch_data],
+                }
+            })
+            .collect();
+        Track::new(self.sample_rate, 1, buffer)
+    }
+
+    /// Slice by seconds (convenience wrapper around the TimeStamp-based `slice`).
+    pub fn slice_seconds(&self, start_s: f64, end_s: f64) -> Self {
+        let tb_num = self
+            .buffer
+            .first()
+            .map_or(1, |f| f.time.num);
+        let tb_den = self
+            .buffer
+            .first()
+            .map_or(self.sample_rate, |f| f.time.den);
+        let start = TimeStamp::from_seconds(start_s, tb_num, tb_den);
+        let end = TimeStamp::from_seconds(end_s, tb_num, tb_den);
+        if start >= end {
+            return Track::new(self.sample_rate, self.channels, vec![]);
+        }
+        self.slice(start, end)
+    }
+
+    /// Mix (sum) two tracks together. They must have the same sample rate and
+    /// channel count. If their durations differ, the shorter one is padded with silence.
+    pub fn mix_sum(a: &Track, b: &Track) -> Result<Track, TrackError> {
+        if a.sample_rate != b.sample_rate || a.channels != b.channels {
+            return Err(TrackError::MixingIsNotPossible);
+        }
+        let n_ch = a.channels as usize;
+        let sr = a.sample_rate;
+
+        // Flatten both tracks
+        let flatten = |t: &Track| -> Vec<Vec<f32>> {
+            let mut out: Vec<Vec<f32>> = vec![Vec::new(); n_ch];
+            for frame in t.buffer() {
+                for (i, ch) in frame.data.iter().enumerate() {
+                    if i < n_ch {
+                        out[i].extend_from_slice(ch);
+                    }
+                }
+            }
+            out
+        };
+
+        let mut a_flat = flatten(a);
+        let b_flat = flatten(b);
+
+        let max_len = a_flat
+            .first()
+            .map_or(0, |c| c.len())
+            .max(b_flat.first().map_or(0, |c| c.len()));
+
+        for ch_idx in 0..n_ch {
+            a_flat[ch_idx].resize(max_len, 0.0);
+            let b_len = b_flat.get(ch_idx).map_or(0, |c| c.len());
+            for i in 0..b_len {
+                a_flat[ch_idx][i] += b_flat[ch_idx][i];
+            }
+        }
+
+        // Pack
+        const FRAME_SIZE: usize = 1024;
+        let mut out_buffer = Vec::new();
+        let mut offset = 0usize;
+        let tb_num = a.buffer.first().map_or(1, |f| f.time.num);
+        let tb_den = a.buffer.first().map_or(sr, |f| f.time.den);
+        let mut ts = TimeStamp { value: 0, num: tb_num, den: tb_den };
+
+        while offset < max_len {
+            let end = (offset + FRAME_SIZE).min(max_len);
+            let data: Vec<Vec<f32>> = a_flat.iter().map(|ch| ch[offset..end].to_vec()).collect();
+            out_buffer.push(AudioFrame { time: ts, data });
+            let dt = (end - offset) as f64 / sr as f64;
+            ts = ts.add(TimeStamp::from_seconds(dt, tb_num, tb_den));
+            offset = end;
+        }
+
+        Ok(Track::new(sr, a.channels, out_buffer))
+    }
+}
+
