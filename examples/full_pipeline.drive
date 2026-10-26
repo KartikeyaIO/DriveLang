@@ -4,6 +4,7 @@
 
 import std::color;
 import std::kernels;
+import std::audio;
 
 kernel emboss = [
     [-2, -1,  0],
@@ -28,14 +29,14 @@ filter hue_rotate(angle) {
     b = clamp(nb, 0, 255);
 }
 
-af normalize_audio() {
-    let peak = max(max(abs(l), abs(r)), 0.000001);
-    l = l / peak;
-    r = r / peak;
+af soft_chime(freq) {
+    let sample = sin(6.2831853 * freq * time) * 0.25;
+    l = sample;
+    r = sample;
 }
 
 // --- Image pipeline ---
-base   = frame("input_image.jpg") -> resize(1280, 720);
+base   = frame("examples/bw_high_contrast.png") -> resize(1280, 720);
 badge  = frame("examples/bw_high_contrast.png") -> resize(80, 80);
 label  = text("DriveLang", "examples/georgia.ttf", 24, 200, 200, 200);
 
@@ -50,7 +51,11 @@ result = base
 export(result, "Outputs/full_pipeline.png");
 
 // --- Audio pipeline ---
-sfx = track("test_inputs/shankh.mp3") -> normalize_audio();
-export(sfx, "Outputs/ambient_normalized.wav");
+sfx = silence(1.5, 44100, 2)
+    -> soft_chime(660)
+    -> hard_clip(0.8)
+    -> fade_in(0.2)
+    -> fade_out(0.3);
+export(sfx, "Outputs/full_pipeline_audio.wav");
 
 print("Done.");

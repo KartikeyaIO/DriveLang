@@ -1,6 +1,6 @@
 // examples/audio_composition_mp3.drive
 // Demonstrates:
-// 1. Feature 9: Native MP3 export (pure Rust, no FFmpeg) via export() and export_mp3()
+// 1. MP3 export without requiring an external FFmpeg installation.
 // 2. Feature 10: Rich audio manipulation: merge, slice, concat, channel_split,
 //                and pipeline stages: reverse(), speed(), fade_in(), fade_out()
 // 3. Feature 7: if / elif / else inside audio filters (af)
@@ -58,7 +58,7 @@ print("Extracted left channel into a separate mono track.\n");
 print("Applying audio pipeline: reverse -> speed(1.2) -> fade_in(0.1s) -> fade_out(0.1s)...\n");
 finished = song -> reverse() -> speed(1.2) -> fade_in(0.1) -> fade_out(0.1);
 
-// 4. Feature 9: Native MP3 Export (pure Rust, zero FFmpeg required)
+// 4. MP3 export through the encoder included with DriveLang.
 print("Exporting native MP3 files (no FFmpeg needed)...\n");
 // Inferred format via .mp3 extension (default 192 kbps):
 export(finished, "Outputs/native_rendered.mp3");

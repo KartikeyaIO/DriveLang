@@ -20,10 +20,13 @@ dir = folder("examples");
 
 print("=== Folder Batch Processing Demo ===\n");
 print(f"Total image files detected in 'examples/': {dir.len()}\n\n");
+print(f"Folder path: {dir.path}; length via len(): {len(dir)}\n");
 
 // 2. Direct random access by file name:
 single_image = dir["bw_high_contrast.png"];
-print(f"Loaded specific image: {single_image.name} ({single_image.width}x{single_image.height})\n");
+first_image = dir[0];
+print(f"Loaded specific image: {single_image.name} ({single_image.width()}x{single_image.height()})\n");
+print(f"First sorted image is {first_image.name}; name length={len(first_image.name)}\n");
 
 // 3. Looped filter application and export using range loop with loop variable access:
 print("Generating parametric sequence from image:\n");

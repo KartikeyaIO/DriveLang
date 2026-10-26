@@ -44,6 +44,7 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           mkdir DriveLang
+          mkdir -p DriveLang/Outputs
           cp target/${{ matrix.target }}/release/${{ matrix.binary }} DriveLang/
           cp GUIDE.md DriveLang/
           cp LICENSE DriveLang/
@@ -56,6 +57,7 @@ jobs:
         shell: pwsh
         run: |
           mkdir DriveLang
+          New-Item -ItemType Directory -Path DriveLang/Outputs
           Copy-Item target/${{ matrix.target }}/release/${{ matrix.binary }} DriveLang/
           Copy-Item GUIDE.md DriveLang/
           Copy-Item LICENSE DriveLang/

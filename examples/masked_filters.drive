@@ -20,7 +20,7 @@ filter vignette(strength) {
     b = b * factor;
 }
 
-img = frame("input_image.jpg");
+img = frame("examples/bw_high_contrast.png");
 
 // Only tint pixels in x: 100..400, y: 50..300
 tinted = img -> redtint()[100..400, 50..300];

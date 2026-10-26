@@ -26,7 +26,7 @@ fn make_card(title, detail, red, green, blue) {
         -> grid(48, 28, 34, 44)
         -> vignette(0.7)
         -> border(8);
-    let artwork = frame("input_image.jpg")
+    let artwork = frame("examples/bw_high_contrast.png")
         -> resize(656, 360)
         -> vivid()
         -> vignette(0.6);

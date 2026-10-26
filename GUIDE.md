@@ -2,7 +2,16 @@
 
 Drive is a pipeline DSL for media editing and digital signal processing. A script loads images, folders, or audio tracks, declares filters and functions, and pipes media through them to produce rendered output. This document covers everything supported by the language.
 
-The `examples/` folder contains annotated scripts demonstrating the language features. Scripts that read media expect the input files or folders to exist at the paths shown; adjust those paths for your assets.
+The `examples/` folder contains runnable scripts and a bundled sample image/font. Run commands from the project or package root; examples write rendered files into `Outputs/`.
+
+## First Run
+
+```sh
+drive run examples/hello.drive
+drive run examples/intro.drive
+```
+
+`drive run FILE` executes a script. `drive new NAME` creates a starter project directory. Add `--time` before the command to print execution timing, for example `drive --time run examples/hello.drive`. Script file paths are resolved from the process working directory. Run from the folder containing `examples/` and `stdlib/`, or adjust paths for your project.
 
 ---
 
@@ -39,7 +48,7 @@ import "std::color";
 
 Loads another Drive file and runs it in the current engine scope. All filters, kernels, user functions, and variables defined in that file become available. Circular imports are safe — each file is only executed once.
 
-Standard library modules (`std::core`, `std::color`, `std::audio`, `std::kernels`, `std::advanced`) are automatically resolved from standard system and library paths.
+Standard library modules (`std::core`, `std::color`, `std::audio`, `std::kernels`, `std::advanced`) are resolved from the release package, development tree, or configured installation paths. `DRIVELANG_STDLIB` can point to a custom standard-library directory. Imports run in the shared engine scope, so imported names are available to later statements; each file is run once. Use `import std::core;` syntax (import aliases are not supported).
 
 ---
 
@@ -111,6 +120,7 @@ print(f"Loaded: {img.name} ({img.width}x{img.height})");
 - `:0N` — Format a number as a zero-padded whole number of at least `N` digits (e.g. `{i:04}` produces `0007`). Fractional values are converted to integers first.
 - `:.Nf` — Format floating point numbers to `N` decimal places (e.g. `{val:.2f}` produces `3.14`).
 - Standard `{expr}` without specifiers formats integers as whole numbers and floats as standard decimals.
+- Write literal braces as `{{` and `}}`.
 
 ---
 
@@ -132,7 +142,10 @@ The `folder` type scans a directory on disk and exposes a container of image fil
 |---|---|---|
 | `folder("dir_path")` | Folder | Loads and indexes all image files in `dir_path` |
 | `folder["filename.png"]` | Frame | Directly loads and returns a specific image frame by file name |
+| `folder[0]` | Frame | Loads an image by zero-based sorted position |
 | `folder.len()` | Number | Returns the count of image files inside the folder |
+| `folder.path` | String | Returns the directory path |
+| `len(folder)` | Number | Also returns the image count; `len(string)` returns the string's byte length |
 | `for img in folder { ... }` | — | Iterates over each image frame in the folder |
 
 ```
@@ -180,6 +193,8 @@ full_song = concat(intro, song, outro);
 left_mono = channel_split(full_song, 0);
 ```
 
+`slice()` selects complete internal audio blocks whose timestamps fall inside the interval; it does not trim samples precisely at the boundaries. `silence()` is assembled from 1024-sample blocks, so its actual duration can be slightly longer than requested. `merge()` adds sample amplitudes and pads the shorter track with silence; it does not normalize the result.
+
 ### Media Export
 
 ```
@@ -188,10 +203,8 @@ export_mp3(track, "output.mp3", bitrate_kbps);
 ```
 
 - **Frame export**: Exports as PNG (e.g. `export(frame, "output.png")`).
-- **Track export**:
-  - If output path ends in `.wav`, exports 32-bit float stereo/mono WAV.
-  - If output path ends in `.mp3`, exports natively as MP3 via pure Rust encoder **without needing external FFmpeg installed**.
-- **`export_mp3(track, path, kbps)`**: Explicit MP3 export with target bitrate (e.g. `128`, `192`, `320`).
+- **Track export**: a path ending in lowercase `.mp3` writes MP3; other extensions write 32-bit float WAV. MP3 encoding uses the bundled LAME encoder dependency; FFmpeg is not invoked.
+- **`export_mp3(track, path, kbps)`**: Explicit MP3 export. Supported bitrates are 128, 160, 192, 256, and 320 kbps; other values fall back to 192 kbps.
 - The path argument can be a formatted string (`f"output/frame_{i:04}.png"`).
 
 ### Console Printing
@@ -494,12 +507,61 @@ if quality == 2 {
 - The `effect` keyword (video time-based shader syntax reserved for future video engine integration).
 - Full video container muxing/demuxing (foundation code in `src/io/video_io.rs` is awaiting pipeline wiring).
 - Dynamic non-constant loop bounds inside per-pixel `filter` bytecode shaders (constant bounds are unrolled).
+- Video import/export, classes, arrays, dictionaries, and import aliases are not part of the current language. Kernel matrices are the supported matrix literal form.
+- Masks select rectangular ranges only; the circle mask type in the Rust implementation is not exposed by the script parser.
+- `and` and `or` are numeric boolean operators; do not rely on short-circuit evaluation.
+
+---
+
+## Standard Library Tour
+
+Import modules with `import std::NAME;`. Each module defines ordinary Drive declarations. Names share one scope, so a later declaration may replace an earlier definition. In particular, both `std::core` and `std::color` define `fade(amount)`; importing color after core selects the color fade. Native pipeline operations such as `gain(db)` and `fade_in(seconds)` are separate built-ins.
+
+### `std::core` image filters
+
+`brightness(amount)`, `contrast(factor)`, `gain(amount)`, `invert()`, `grayscale()`, `red_gain(amount)`, `green_gain(amount)`, `blue_gain(amount)`, `red_only()`, `green_only()`, `blue_only()`, `alpha(value)`, `opacity(amount)`, `quantize(levels)`, `clamp_range(min,max)`, `clamp_low(min)`, `clamp_high(max)`, `gamma(value)`, `mask_white()`, `mask_black()`, `max_channel()`, `min_channel()`, `fade(amount)`, `opaque()`, and `transparent()`.
+
+### `std::color` looks
+
+`sepia()`, `hdr(strength)`, `hdr2(strength)`, `teal_orange(amount)`, `vintage()`, `warm()`, `cool()`, `vivid()`, `muted()`, `red_tint()`, `green_tint()`, `blue_tint()`, `cyanotype()`, `noir()`, `saturation(amount)`, `fade(amount)`, `purple_tint(amount)`, `amber_tint(amount)`, `moonlight(amount)`, `sunset(amount)`, `forest(amount)`, `autumn(amount)`, `cross_process()`, `bleach_bypass(amount)`, and `vibrance(amount)`. This module imports core itself.
+
+### `std::advanced` image effects
+
+`chroma_key(key_r,key_g,key_b,tolerance)`, `color_splash_red(tolerance)`, `split_tone(split_point)`, `scanlines(intensity)`, `grid(spacing,grid_r,grid_g,grid_b)`, `vignette(strength)`, `depth_fog(fog_r,fog_g,fog_b)`, and `cyberpunk_glitch(frequency,intensity)`. This module imports core itself.
+
+### `std::audio` sample filters
+
+`linear_gain(amount)`, `invert()`, `mute()`, `mute_left()`, `mute_right()`, `swap()`, `mono()`, `left_only()`, `right_only()`, `hard_clip(limit)`, `distortion(gain)`, `gate(threshold)`, `tremolo(freq,depth)`, `ring(freq)`, `sample_fade_in(duration)`, `crusher(levels)`, and `rectify()`. These run per sample. Native `gain(db)`, `fade_in(seconds)`, `fade_out(seconds)`, `reverse()`, and `speed(factor)` are separate pipeline operations.
+
+### `std::kernels` convolution presets
+
+`box_blur()`, `gaussian_blur()`, `soft_blur()`, `sharpen()`, `giga_sharpen()`, `ultra_sharpen()`, `edge()`, `edge_soft()`, `edge_strong()`, `emboss()`, `emboss_reverse()`, `outline()`, `motion_horizontal()`, `motion_vertical()`, `cartoon_edge()`, `high_contrast()`, `cross_sharpen()`, `crystal()`, `ridge()`, `sobel_x()`, `sobel_y()`, `line_horizontal()`, and `line_vertical()`.
+
+---
+
+## Practical Tips and Patterns
+
+- **Build in small stages.** Export after one filter, then add more pipeline stages. This makes color and alpha changes easier to locate.
+- **Keep channel ranges in mind.** Image channels use 0–255; audio samples usually use −1–1. Clamp image math when formulas can exceed the range.
+- **Ranges are half-open.** `0..width` includes coordinate zero and stops before `width`; this is useful for full-frame loops and masks.
+- **Use `let` for intermediate math.** It names a value inside filters and functions and makes formulas easier to read.
+- **Resize is nearest-neighbour.** It is useful for pixel art and exact replication, but does not interpolate pixels.
+- **Check kernel sums.** Nonzero-sum custom kernels are divided by their weight sum. Zero-sum edge kernels are left unnormalized.
+- **Blend is channel interpolation.** `blend(x,y,overlay,t)` interpolates all RGBA channels at the placement; it is not alpha compositing. Use a factor between 0 and 1 for standard interpolation.
+- **Create output directories first.** `export` does not create missing parent directories. Folder loops visit supported image files in sorted order.
+- **Use f-strings for generated paths.** `f"Outputs/frame_{i:04}.png"` keeps numbered output batches sortable.
+- **Audio `speed()` changes duration and pitch.** It resamples: a factor above 1 plays faster and shortens the track.
+- **Read imported formulas when tuning.** Standard-library declarations are ordinary source, and parameter behavior follows their formulas.
+
+## Language Feature Checklist
+
+The current language includes imports, assignment and `let`, numbers and strings, f-strings, arithmetic and comparisons, numeric boolean logic, built-in math, function calls, field and method access, folder indexing, ranges, `if / elif / else`, range and folder loops, returns, `filter`, `af`, `kernel`, and `fn` declarations, frame and track pipelines, rectangular filter masks, printing, media export, and the standard library modules above. The example table below links runnable demonstrations.
 
 ---
 
 ## Example Scripts
 
-The `examples/` directory contains scripts demonstrating the language features. Scripts that read media expect their input files and folders to exist at the paths written in the script; change those paths to match your assets.
+The `examples/` directory contains self-contained demonstrations using the bundled image and font. Run them from the package root; they write files under `Outputs/`.
 
 | File | What to learn from it |
 |---|---|

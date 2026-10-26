@@ -7,12 +7,12 @@ kernel sharpen = [
     [ 0, -1,  0]
 ];
 
-img = frame("input_image.jpg");
+img = frame("examples/bw_high_contrast.png");
 
 // Apply custom sharpen kernel
 sharpened = img -> sharpen();
 
-// Apply a dynamic box-blur of radius 9 (generated at runtime)
+// Generate and apply a dynamic 9-by-9 box-blur kernel at runtime.
 blurred = img -> blur(9);
 
 export(sharpened, "Outputs/sharpened.png");

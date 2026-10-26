@@ -1,10 +1,5 @@
 // examples/math_and_functions.drive
-// Demonstrates:
-// 1. Feature 2: Math functions callable at script level (sin, cos, sqrt, clamp, lerp, pow, etc.)
-// 2. Feature 12: User-defined functions (fn) with loops inside
-// 3. Feature 7: if / elif / else inside functions and scripts
-// 4. Feature 5: Escape sequences (\n, \t, \", \\)
-// 5. Feature 6: Formatted strings (f"...") with float precision formatting (:.2f)
+// Try script-level math, user functions, loops, escapes, f-strings, and len().
 
 // User-defined function with a loop inside to compute factorials or power accumulations
 fn compute_harmonic_sum(n) {
@@ -36,6 +31,11 @@ lerp_val = lerp(10.0, 50.0, 0.5); // 30.0
 clamped = clamp(150.0, 0.0, 100.0); // 100.0
 rounded = round(4.65);
 rem = mod(17, 5); // 2
+trig = atan2(1, 1) + asin(0.5) + acos(1) + atan(1) + tan(0);
+logs = exp(1) + log(exp(1)) + log10(100);
+bounds = min(3, max(4, 5)) + smooth_lerp(0, 10, 0.5);
+floored = floor(4.8) + ceil(4.2);
+text_len = len("DriveLang");
 
 // 2. Calling user-defined functions
 harmonic_10 = compute_harmonic_sum(11);
@@ -49,5 +49,9 @@ print(f"Interpolation & Bounds:\n\tlerp(10, 50, 0.5) = {lerp_val:.2f}\n\tclamp(1
 print(f"Rounding & Modulo:\n\tround(4.65) = {rounded}\n\tmod(17, 5) = {rem}\n");
 print(f"Loops in Functions:\n\tHarmonic series H(10) = {harmonic_10:.2f}\n");
 print(f"Function Category: {category}\n");
+print(f"More math: trig={trig:.2f}, logs={logs:.2f}, bounds={bounds:.2f}, floor+ceil={floored}, len={text_len}\n");
+print(f"Escapes: line one\nline two\t{{literal braces}}\n");
+carriage_return = "left\rright";
+null_byte = "A\0B";
 
 print("Finished math and user function demo successfully!\n");

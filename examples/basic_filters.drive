@@ -13,7 +13,7 @@ filter invert() {
     b = 255 - b;
 }
 
-img = frame("input_image.jpg");
+img = frame("examples/bw_high_contrast.png");
 
 result = img -> brighten(40) -> invert();
 
