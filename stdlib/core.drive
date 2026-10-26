@@ -81,9 +81,12 @@ filter opacity(amount) {
 
 // Reduces the number of colors in a image, the levels decide how many colors are permitted
 filter quantize(levels) {
-    r = floor(r * levels / 256) * (256 / levels);
-    g = floor(g * levels / 256) * (256 / levels);
-    b = floor(b * levels / 256) * (256 / levels);
+    // Keep the level count within the meaningful range and include both
+    // channel endpoints, so a two-level quantize produces black and white.
+    let safe_levels = clamp(floor(levels), 2, 256);
+    r = floor(r * safe_levels / 256) * (255 / (safe_levels - 1));
+    g = floor(g * safe_levels / 256) * (255 / (safe_levels - 1));
+    b = floor(b * safe_levels / 256) * (255 / (safe_levels - 1));
 }
 
 
@@ -151,5 +154,15 @@ filter opaque() {
 
 filter transparent() {
     a = 0;
+}
+
+// Composite a transparent frame over a chosen solid color and make it opaque.
+// Use before exporting PNGs intended for services that may ignore transparency.
+filter flatten(background_r, background_g, background_b) {
+    let source_alpha = a / 255;
+    r = r * source_alpha + background_r * (1 - source_alpha);
+    g = g * source_alpha + background_g * (1 - source_alpha);
+    b = b * source_alpha + background_b * (1 - source_alpha);
+    a = 255;
 }
 

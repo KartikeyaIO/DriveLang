@@ -1,0 +1,15 @@
+// Demonstrate alpha-aware overlays and make an opaque upload-ready PNG.
+import std::advanced;
+
+image = frame("examples/bw_high_contrast.png");
+keyed = image -> chroma_key(255, 255, 255, 24);
+title = text("DriveLang", "examples/georgia.ttf", 56, 255, 150, 100);
+
+// blend() respects each overlay pixel's alpha, including transparent text space.
+composed = keyed -> blend(42, 42, title, 1.0);
+
+// Preserve transparency for editors, and create an explicitly opaque social export.
+export(composed, "Outputs/alpha_composite_preview.png");
+upload_ready = composed -> flatten(16, 22, 34);
+export(upload_ready, "Outputs/upload_ready.png");
+print("Wrote a transparent preview and an opaque upload-ready PNG.\n");

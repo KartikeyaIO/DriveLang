@@ -203,6 +203,7 @@ export_mp3(track, "output.mp3", bitrate_kbps);
 ```
 
 - **Frame export**: Exports as PNG (e.g. `export(frame, "output.png")`).
+- PNG preserves transparency. Some viewers or upload pipelines display transparent pixels against a default canvas color. Use `frame -> flatten(255, 255, 255)` for a white opaque background, or substitute another RGB background before exporting.
 - **Track export**: a path ending in lowercase `.mp3` writes MP3; other extensions write 32-bit float WAV. MP3 encoding uses the bundled LAME encoder dependency; FFmpeg is not invoked.
 - **`export_mp3(track, path, kbps)`**: Explicit MP3 export. Supported bitrates are 128, 160, 192, 256, and 320 kbps; other values fall back to 192 kbps.
 - The path argument can be a formatted string (`f"output/frame_{i:04}.png"`).
@@ -286,7 +287,7 @@ Pipes a `Frame` or `Track` through a sequential chain of operations from left to
 |---|---|---|
 | `resize(w, h)` | width, height | Nearest-neighbour pixel resize |
 | `crop(x, y, w, h)` | x, y, width, height | Extract a sub-rectangle |
-| `blend(x, y, frame2, alpha)` | x, y, frame2, blend factor | Linearly blends the RGBA channel values of `frame2` with the base at `(x, y)`. Use a factor from 0.0 to 1.0 for interpolation. |
+| `blend(x, y, frame2, opacity)` | x, y, frame2, stage opacity | Composites the overlay over the base using its per-pixel alpha and the stage opacity (clamped to 0–1). |
 | `blur(size)` | kernel size | Dynamic box-blur spatial convolution; an even size is rounded up to the next odd size |
 
 ### Frame Metadata Properties
@@ -519,7 +520,9 @@ Import modules with `import std::NAME;`. Each module defines ordinary Drive decl
 
 ### `std::core` image filters
 
-`brightness(amount)`, `contrast(factor)`, `gain(amount)`, `invert()`, `grayscale()`, `red_gain(amount)`, `green_gain(amount)`, `blue_gain(amount)`, `red_only()`, `green_only()`, `blue_only()`, `alpha(value)`, `opacity(amount)`, `quantize(levels)`, `clamp_range(min,max)`, `clamp_low(min)`, `clamp_high(max)`, `gamma(value)`, `mask_white()`, `mask_black()`, `max_channel()`, `min_channel()`, `fade(amount)`, `opaque()`, and `transparent()`.
+`brightness(amount)`, `contrast(factor)`, `gain(amount)`, `invert()`, `grayscale()`, `red_gain(amount)`, `green_gain(amount)`, `blue_gain(amount)`, `red_only()`, `green_only()`, `blue_only()`, `alpha(value)`, `opacity(amount)`, `quantize(levels)`, `clamp_range(min,max)`, `clamp_low(min)`, `clamp_high(max)`, `gamma(value)`, `mask_white()`, `mask_black()`, `max_channel()`, `min_channel()`, `fade(amount)`, `opaque()`, `transparent()`, and `flatten(background_r,background_g,background_b)`.
+
+`flatten()` composites each pixel's RGB over the supplied background using its alpha, then sets alpha to fully opaque. `quantize(levels)` clamps its level count to 2–256 and includes both black and white endpoints.
 
 ### `std::color` looks
 
@@ -547,7 +550,8 @@ Import modules with `import std::NAME;`. Each module defines ordinary Drive decl
 - **Use `let` for intermediate math.** It names a value inside filters and functions and makes formulas easier to read.
 - **Resize is nearest-neighbour.** It is useful for pixel art and exact replication, but does not interpolate pixels.
 - **Check kernel sums.** Nonzero-sum custom kernels are divided by their weight sum. Zero-sum edge kernels are left unnormalized.
-- **Blend is channel interpolation.** `blend(x,y,overlay,t)` interpolates all RGBA channels at the placement; it is not alpha compositing. Use a factor between 0 and 1 for standard interpolation.
+- **Blend uses source-over alpha.** `blend(x,y,overlay,opacity)` respects each overlay pixel's alpha, combines it with the destination, and clamps opacity to 0–1.
+- **Make upload-ready opaque images.** Apply `flatten(r,g,b)` from `std::core` before export to composite transparency over a deliberate background color.
 - **Create output directories first.** `export` does not create missing parent directories. Folder loops visit supported image files in sorted order.
 - **Use f-strings for generated paths.** `f"Outputs/frame_{i:04}.png"` keeps numbered output batches sortable.
 - **Audio `speed()` changes duration and pitch.** It resamples: a factor above 1 plays faster and shortens the track.
@@ -570,6 +574,7 @@ The `examples/` directory contains self-contained demonstrations using the bundl
 | `grayscale.drive` | Luminance formulas and `let` bindings |
 | `kernels.drive` | `kernel` declarations and built-in `blur(n)` |
 | `masked_filters.drive` | Spatial sub-region masks `[x1..x2, y1..y2]` |
+| `alpha_composite_upload.drive` | Alpha-aware text overlay and flattening to an opaque upload-ready PNG |
 | `intro.drive` | Comprehensive language feature showcase |
 | `batch_loop.drive` | `for` loops and print formatting |
 | `audio.drive` | Audio DSP with `af`, `time`, and `sr` |

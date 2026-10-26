@@ -20,69 +20,84 @@ use crate::pipeline::pipeline::{
 use crate::range::{Mask, Rect, StepRange};
 use crate::text::Text;
 
+fn is_stdlib_dir(path: &Path) -> bool {
+    path.is_dir()
+        && ["core", "color", "advanced", "audio", "kernels"]
+            .iter()
+            .all(|module| path.join(format!("{module}.drive")).is_file())
+}
+
 fn find_stdlib() -> Option<PathBuf> {
-    // 1. Environment variable
-    if let Ok(dir) = std::env::var("DRIVELANG_STDLIB") {
-        let path = PathBuf::from(dir);
-        if path.is_dir() {
-            return Some(path);
-        }
+    let mut candidates = Vec::new();
+
+    // An explicit override always wins when it points to a complete library.
+    if let Some(dir) = std::env::var_os("DRIVELANG_STDLIB") {
+        candidates.push(PathBuf::from(dir));
     }
 
-    // 2. Beside the executable (release package layout)
+    // Portable release archives keep stdlib next to drive. Also support
+    // conventional bin/ + share/ layouts used by system package managers.
     if let Ok(exe) = std::env::current_exe() {
         if let Some(parent) = exe.parent() {
-            let path = parent.join("stdlib");
-            if path.is_dir() {
-                return Some(path);
+            candidates.push(parent.join("stdlib"));
+            if let Some(prefix) = parent.parent() {
+                candidates.push(prefix.join("share/DriveLang/stdlib"));
+                candidates.push(prefix.join("share/drivelang/stdlib"));
             }
         }
 
-        // 3. Development builds keep the executable under target/{debug,release}.
-        // Walk its parent directories so `cargo run` can find the repository's
-        // stdlib directory without requiring DRIVELANG_STDLIB to be set.
+        // Development and local cargo installs may live under target/ or
+        // ~/.cargo/bin. Walk their parents for a repository/package layout.
         for ancestor in exe.ancestors().skip(1) {
-            let path = ancestor.join("stdlib");
-            if path.is_dir() {
-                return Some(path);
-            }
+            candidates.push(ancestor.join("stdlib"));
         }
     }
 
-    // 4. User install
-    if let Some(home) = std::env::var_os("HOME") {
-        let candidates = [
-            ".local/share/DriveLang/stdlib",
-            ".local/share/drivelang/stdlib",
-            "DriveLang/stdlib",
-        ];
-
-        for dir in candidates {
-            let path = PathBuf::from(&home).join(dir);
-            if path.is_dir() {
-                return Some(path);
-            }
+    // A project-local library should be found when the installed executable
+    // is run from a checkout, even if an older user-level copy also exists.
+    if let Ok(cwd) = std::env::current_dir() {
+        for ancestor in cwd.ancestors() {
+            candidates.push(ancestor.join("stdlib"));
         }
     }
 
-    // 5. Common Unix install locations
-    let system_dirs = [
+    // `cargo install --path .` builds from the local project. Retain that
+    // source-tree location as a fallback when the binary is run elsewhere.
+    candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("stdlib"));
+
+    // User data locations on Linux/macOS and Windows.
+    if let Some(data_home) = std::env::var_os("XDG_DATA_HOME") {
+        let data_home = PathBuf::from(data_home);
+        candidates.push(data_home.join("DriveLang/stdlib"));
+        candidates.push(data_home.join("drivelang/stdlib"));
+    }
+    for variable in ["APPDATA", "LOCALAPPDATA", "PROGRAMDATA"] {
+        if let Some(base) = std::env::var_os(variable) {
+            candidates.push(PathBuf::from(&base).join("DriveLang/stdlib"));
+            candidates.push(PathBuf::from(base).join("drivelang/stdlib"));
+        }
+    }
+    if let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) {
+        let home = PathBuf::from(home);
+        candidates.push(home.join(".local/share/DriveLang/stdlib"));
+        candidates.push(home.join(".local/share/drivelang/stdlib"));
+        candidates.push(home.join("AppData/Roaming/DriveLang/stdlib"));
+        candidates.push(home.join("DriveLang/stdlib"));
+    }
+
+    // Conventional Unix-wide installs.
+    for dir in [
         "/usr/local/share/DriveLang/stdlib",
         "/usr/local/share/drivelang/stdlib",
         "/usr/share/DriveLang/stdlib",
         "/usr/share/drivelang/stdlib",
         "/opt/DriveLang/stdlib",
         "/opt/drivelang/stdlib",
-    ];
-
-    for dir in system_dirs {
-        let path = PathBuf::from(dir);
-        if path.is_dir() {
-            return Some(path);
-        }
+    ] {
+        candidates.push(PathBuf::from(dir));
     }
 
-    None
+    candidates.into_iter().find(|path| is_stdlib_dir(path))
 }
 
 #[derive(Debug, Clone)]
@@ -622,19 +637,31 @@ fn compile_channel_program(
     };
 
     let assigns = body_assigns_channel(body, &target);
-    if assigns {
-        out.push(match target {
+    if !assigns {
+        // Local lets are compiled independently for each output channel. If
+        // this channel is untouched, those locals leave no channel value on
+        // the VM stack; explicitly pass the original channel through instead.
+        return Ok(vec![match target {
             Channel::R => Instruction::LoadR,
             Channel::G => Instruction::LoadG,
             Channel::B => Instruction::LoadB,
             Channel::A => Instruction::LoadA,
             Channel::T => Instruction::LoadT,
             Channel::L => Instruction::LoadL,
-        });
-        let local_index = local_scope.len() - param_count;
-        out.push(Instruction::StoreLocal(local_index));
-        local_scope.push(cur_var.to_string());
+        }]);
     }
+
+    out.push(match target {
+        Channel::R => Instruction::LoadR,
+        Channel::G => Instruction::LoadG,
+        Channel::B => Instruction::LoadB,
+        Channel::A => Instruction::LoadA,
+        Channel::T => Instruction::LoadT,
+        Channel::L => Instruction::LoadL,
+    });
+    let local_index = local_scope.len() - param_count;
+    out.push(Instruction::StoreLocal(local_index));
+    local_scope.push(cur_var.to_string());
 
     compile_stmts_for_channel(
         body,
@@ -649,19 +676,8 @@ fn compile_channel_program(
         active_vars,
     )?;
 
-    if assigns {
-        if let Some(pos) = local_scope[param_count..].iter().position(|p| p == cur_var) {
-            out.push(Instruction::LoadLocal(pos));
-        }
-    } else if out.is_empty() {
-        out.push(match target {
-            Channel::R => Instruction::LoadR,
-            Channel::G => Instruction::LoadG,
-            Channel::B => Instruction::LoadB,
-            Channel::A => Instruction::LoadA,
-            Channel::T => Instruction::LoadT,
-            Channel::L => Instruction::LoadL,
-        });
+    if let Some(pos) = local_scope[param_count..].iter().position(|p| p == cur_var) {
+        out.push(Instruction::LoadLocal(pos));
     }
     Ok(out)
 }
@@ -1340,7 +1356,9 @@ impl Engine {
                         let mut std = match find_stdlib() {
                             Some(value) => value,
                             None => {
-                                return Err(EngineError::Io(IOError::FileNotFound));
+                                return Err(EngineError::Eval(
+                                    "Could not locate the DriveLang standard library. Place a complete stdlib/ folder beside drive or in the project, or set DRIVELANG_STDLIB to its location.".into(),
+                                ));
                             }
                         };
                         for component in path.iter().skip(1) {

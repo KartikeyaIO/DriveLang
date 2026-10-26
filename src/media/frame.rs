@@ -2,6 +2,32 @@ use std::fmt;
 
 use std::cmp::max;
 
+fn composite_rgba(dst: [u8; 4], src: [u8; 4], opacity: f64) -> [u8; 4] {
+    let source_alpha = (src[3] as f64 / 255.0) * opacity.clamp(0.0, 1.0);
+    if source_alpha <= 0.0 {
+        return dst;
+    }
+
+    let destination_alpha = dst[3] as f64 / 255.0;
+    let output_alpha = source_alpha + destination_alpha * (1.0 - source_alpha);
+    if output_alpha <= 0.0 {
+        return [0, 0, 0, 0];
+    }
+
+    let channel = |index: usize| {
+        let premultiplied = src[index] as f64 * source_alpha
+            + dst[index] as f64 * destination_alpha * (1.0 - source_alpha);
+        (premultiplied / output_alpha).round().clamp(0.0, 255.0) as u8
+    };
+
+    [
+        channel(0),
+        channel(1),
+        channel(2),
+        (output_alpha * 255.0).round().clamp(0.0, 255.0) as u8,
+    ]
+}
+
 // CONFIGS
 
 #[derive(Debug, Clone, Copy)]
@@ -515,10 +541,15 @@ impl Frame {
                 };
 
                 for i in 0..r.len() {
-                    r[i] = (r[i] as f32 * (1.0 - alpha) + r1[i] as f32 * alpha) as u8;
-                    g[i] = (g[i] as f32 * (1.0 - alpha) + g1[i] as f32 * alpha) as u8;
-                    b[i] = (b[i] as f32 * (1.0 - alpha) + b1[i] as f32 * alpha) as u8;
-                    a[i] = (a[i] as f32 * (1.0 - alpha) + a1[i] as f32 * alpha) as u8;
+                    let out = composite_rgba(
+                        [r[i], g[i], b[i], a[i]],
+                        [r1[i], g1[i], b1[i], a1[i]],
+                        alpha as f64,
+                    );
+                    r[i] = out[0];
+                    g[i] = out[1];
+                    b[i] = out[2];
+                    a[i] = out[3];
                 }
             }
 
@@ -601,6 +632,7 @@ impl Frame {
     }
     pub fn blend_on(&mut self, pos: &Pos, frame: &Frame, alpha: f64) -> Result<(), FrameError> {
         let Pos(x, y) = *pos;
+        let opacity = alpha.clamp(0.0, 1.0);
 
         if x + frame.width > self.width || y + frame.height > self.height {
             return Err(FrameError::BlitFailed);
@@ -621,10 +653,15 @@ impl Frame {
                 let j = ((y + row) * self.width + (x + col)) as usize;
                 let i = (row * frame.width + col) as usize;
 
-                r[j] = (r[j] as f64 * (1.0 - alpha) + r2[i] as f64 * alpha) as u8;
-                g[j] = (g[j] as f64 * (1.0 - alpha) + g2[i] as f64 * alpha) as u8;
-                b[j] = (b[j] as f64 * (1.0 - alpha) + b2[i] as f64 * alpha) as u8;
-                a[j] = (a[j] as f64 * (1.0 - alpha) + a2[i] as f64 * alpha) as u8;
+                let out = composite_rgba(
+                    [r[j], g[j], b[j], a[j]],
+                    [r2[i], g2[i], b2[i], a2[i]],
+                    opacity,
+                );
+                r[j] = out[0];
+                g[j] = out[1];
+                b[j] = out[2];
+                a[j] = out[3];
             }
         }
 
